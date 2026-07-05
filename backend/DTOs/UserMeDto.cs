@@ -24,7 +24,12 @@ namespace Entry.Auth.DTOs
     public string? Avatar { get; set; }
 
     [MaxLength(64)]
-    public string? DisplayName { get; set; }
+    [RegularExpression("^[a-zA-Z]+$", ErrorMessage = "First name can only contain letters")]
+    public string? FirstName { get; set; }
+
+    [MaxLength(64)]
+    [RegularExpression("^[a-zA-Z]+$", ErrorMessage = "Last name can only contain letters")]
+    public string? LastName { get; set; }
 
     public bool Premium { get; set; }
   }

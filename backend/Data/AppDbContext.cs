@@ -11,18 +11,31 @@ namespace Entry.Auth.Data
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<UserSession> UserSessions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
+      base.OnModelCreating(builder);
+
       builder.Entity<AppUser>(entity =>
       {
+        entity.ToTable("Users");
+
         entity.Property(x => x.CreatedAt).IsRequired();
 
         // Optional profile fields
-        entity.Property(x => x.DisplayName).HasMaxLength(64);
+        entity.Property(x => x.FirstName).HasMaxLength(64);
+        entity.Property(x => x.LastName).HasMaxLength(64);
         entity.Property(x => x.Avatar).HasMaxLength(256);
         entity.Property(x => x.Premium).HasDefaultValue(false);
       });
+
+      builder.Entity<IdentityRole>(entity => entity.ToTable("Roles"));
+      builder.Entity<IdentityUserRole<string>>(entity => entity.ToTable("UserRoles"));
+      builder.Entity<IdentityUserClaim<string>>(entity => entity.ToTable("UserClaims"));
+      builder.Entity<IdentityUserLogin<string>>(entity => entity.ToTable("UserLogins"));
+      builder.Entity<IdentityRoleClaim<string>>(entity => entity.ToTable("RoleClaims"));
+      builder.Entity<IdentityUserToken<string>>(entity => entity.ToTable("UserTokens"));
 
       builder.Entity<RefreshToken>(entity =>
       {
@@ -37,10 +50,24 @@ namespace Entry.Auth.Data
         entity.HasOne(x => x.User)
               .WithMany(u => u.RefreshTokens)
               .HasForeignKey(x => x.UserId)
-              .OnDelete(DeleteBehavior.Cascade);
+              .OnDelete(DeleteBehavior.Restrict);
       });
 
-      base.OnModelCreating(builder);
+      builder.Entity<UserSession>(entity =>
+      {
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.UserId).IsRequired();
+        entity.Property(x => x.CreatedAt).IsRequired();
+        entity.Property(x => x.LastUsedAt).IsRequired();
+
+        entity.HasIndex(x => x.UserId);
+
+        entity.HasOne(x => x.User)
+              .WithMany(u => u.Sessions)
+              .HasForeignKey(x => x.UserId)
+              .OnDelete(DeleteBehavior.Cascade);
+      });
     }
   }
 }

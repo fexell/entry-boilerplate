@@ -1,3 +1,5 @@
+
+
 namespace Entry.Auth.Models
 {
   public class RefreshToken
@@ -8,6 +10,8 @@ namespace Entry.Auth.Models
 
     public string UserId { get; set; } = string.Empty;
 
+    public Guid SessionId { get; set; }
+
     public DateTime ExpiresAt { get; set; }
 
     public bool Revoked { get; set; } = false;
@@ -15,5 +19,7 @@ namespace Entry.Auth.Models
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public AppUser User { get; set; } = null!;
+
+    public UserSession Session { get; set; } = null!;
   }
 }

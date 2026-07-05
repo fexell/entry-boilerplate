@@ -107,6 +107,18 @@ namespace Entry.Auth.Extensions
               context.Token = token;
 
             return Task.CompletedTask;
+          },
+
+          OnTokenValidated = context =>
+          {
+            var purpose = context.Principal?.FindFirst("purpose")?.Value;
+
+            if(purpose == "2fa")
+            {
+              context.Fail("Invalid token type.");
+            }
+
+            return Task.CompletedTask;
           }
         };
       });
@@ -122,9 +134,11 @@ namespace Entry.Auth.Extensions
       services.AddScoped<IUserService, UserService>();
       services.AddScoped<IAuthService, AuthService>();
       services.AddScoped<IVerificationEmailService, VerificationEmailService>();
+      services.AddScoped<IPasswordResetService, PasswordResetService>();
 
       services.AddScoped<IJwtService, JwtService>();
       services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+      services.AddScoped<ITwoFactorService, TwoFactorService>();
 
       services.AddHostedService<EmailVerificationRefreshService>();
 

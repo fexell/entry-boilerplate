@@ -1,4 +1,4 @@
-
+using System.Text.Json.Serialization;
 
 namespace Entry.Auth.DTOs
 {
@@ -7,11 +7,18 @@ namespace Entry.Auth.DTOs
     public bool Success { get; set; }
     public List<string>? Errors { get; set; }
 
+    [JsonIgnore]
     public string? AccessToken { get; set; }
+
+    [JsonIgnore]
     public string? RefreshToken { get; set; }
 
     public int ExpiresIn { get; set; }
 
     public UserMeDto? User { get; set; }
+
+    public bool RequiresTwoFactor { get; set; }
+
+    public string? TwoFactorToken { get; set; }
   }
 }

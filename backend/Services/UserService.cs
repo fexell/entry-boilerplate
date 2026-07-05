@@ -71,6 +71,18 @@ namespace Entry.Auth.Services
         updated = true;
       }
 
+      if(dto.FirstName != null && dto.FirstName != user.FirstName)
+      {
+        user.FirstName = dto.FirstName;
+        updated = true;
+      }
+
+      if(dto.LastName != null && dto.LastName != user.LastName)
+      {
+        user.LastName = dto.LastName;
+        updated = true;
+      }
+
       if (!updated) return true;
 
       var result = await _userManager.UpdateAsync(user);
@@ -139,7 +151,8 @@ namespace Entry.Auth.Services
         CreatedAt = user.CreatedAt,
         EmailConfirmed = user.EmailConfirmed,
         Avatar = user.Avatar,
-        DisplayName = user.DisplayName,
+        FirstName = user.FirstName,
+        LastName = user.LastName,
         Premium = user.Premium
       };
     }

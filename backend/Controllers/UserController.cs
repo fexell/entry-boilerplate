@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Entry.Auth.DTOs;
 using Entry.Auth.Models;
 using Entry.Auth.Services;
+using Entry.Auth.Extensions;
 
 namespace Entry.Auth.Controllers
 {
@@ -26,15 +27,24 @@ namespace Entry.Auth.Controllers
     [HttpGet("me")]
     public async Task<IActionResult> Me()
     {
-      var userId = User.FindFirst("sub")?.Value;
-      if (string.IsNullOrEmpty(userId))
+      string userId;
+
+      try
+      {
+        userId = User.GetUserId();
+      }
+      catch
+      {
         return Unauthorized();
+      }
 
       var user = await _userService.GetByIdAsync(userId);
+
       if (user == null)
         return Unauthorized();
 
       var dto = await _userService.GetUserMeAsync(user);
+
       return Ok(dto);
     }
 
@@ -45,9 +55,7 @@ namespace Entry.Auth.Controllers
     [HttpPut("update")]
     public async Task<IActionResult> Update([FromBody] UserUpdateDto dto)
     {
-      var userId = User.FindFirst("sub")?.Value;
-      if (string.IsNullOrEmpty(userId))
-        return Unauthorized();
+      var userId = User.GetUserId();
 
       var user = await _userService.GetByIdAsync(userId);
       if (user == null)
@@ -68,9 +76,7 @@ namespace Entry.Auth.Controllers
     [HttpDelete("delete")]
     public async Task<IActionResult> Delete()
     {
-      var userId = User.FindFirst("sub")?.Value;
-      if (string.IsNullOrEmpty(userId))
-        return Unauthorized();
+      var userId = User.GetUserId();
 
       var user = await _userService.GetByIdAsync(userId);
       if (user == null)

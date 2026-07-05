@@ -5,7 +5,23 @@ using Entry.Auth.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// -----------------------------------------------------
+// CORS
+// -----------------------------------------------------
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy.WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
+// -----------------------------------------------------
 // Services
+// -----------------------------------------------------
 builder.Services
     .AddAppDbContext(builder.Configuration)
     .AddAppIdentity()
@@ -13,7 +29,7 @@ builder.Services
     .AddAppServices()
     .AddAppAuthorization();
 
-builder.Services.AddHttpClient<IEmailService, EmailService>();
+// builder.Services.AddHttpClient<IEmailService, EmailService>();
 
 builder.Services.AddControllers(options =>
 {
@@ -24,6 +40,9 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 // builder.Services.AddHostedService<EmailVerificationRefreshService>();
 
+// -----------------------------------------------------
+// Build
+// -----------------------------------------------------
 var app = builder.Build();
 
 // Middleware
@@ -36,8 +55,10 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
+app.UseCors("Frontend");
+
 // Silent refresh BEFORE authentication
-app.UseMiddleware<SilentRefreshMiddleware>();
+// app.UseMiddleware<SilentRefreshMiddleware>();
 
 app.UseAuthentication();
 app.UseAuthorization();

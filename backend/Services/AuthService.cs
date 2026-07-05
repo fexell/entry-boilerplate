@@ -94,12 +94,42 @@ namespace Entry.Auth.Services
         };
       }
 
+      if (signInResult.IsNotAllowed)
+      {
+        if (!user.EmailConfirmed)
+        {
+          return new AuthResultDto
+          {
+            Success = false,
+            Errors = new List<string> { "Please verify your email before logging in." }
+          };
+        }
+
+        return new AuthResultDto
+        {
+          Success = false,
+          Errors = new List<string> { "Login not allowed." }
+        };
+      }
+
       if (!signInResult.Succeeded)
       {
         return new AuthResultDto
         {
           Success = false,
           Errors = new List<string> { "Invalid credentials." }
+        };
+      }
+
+      if(await _userManager.GetTwoFactorEnabledAsync(user))
+      {
+        var twoFactorToken = _jwtService.GenerateTwoFactorToken(user);
+
+        return new AuthResultDto
+        {
+          Success = true,
+          RequiresTwoFactor = true,
+          TwoFactorToken = twoFactorToken
         };
       }
 
@@ -110,10 +140,10 @@ namespace Entry.Auth.Services
     // REFRESH
     // ------------------------------------------------------
 
-    public async Task<AuthResultDto> RefreshAsync(RefreshDto dto)
+    public async Task<AuthResultDto> RefreshAsync(string refreshToken)
     {
       var existing = await _db.RefreshTokens
-        .FirstOrDefaultAsync(x => x.Token == dto.RefreshToken);
+        .FirstOrDefaultAsync(x => x.Token == refreshToken);
 
       if (existing == null || existing.Revoked || existing.ExpiresAt < DateTime.UtcNow)
       {
@@ -134,7 +164,7 @@ namespace Entry.Auth.Services
         };
       }
 
-      var pair = await _refreshTokenService.RefreshTokenAsync(dto.RefreshToken!);
+      var pair = await _refreshTokenService.RefreshTokenAsync(refreshToken);
       if (pair == null)
       {
         return new AuthResultDto

@@ -5,6 +5,7 @@ using Entry.Auth.DTOs;
 using Entry.Auth.Models;
 using Entry.Auth.Services;
 using Entry.Auth.Utils;
+using System.Security.Claims;
 
 namespace Entry.Auth.Controllers
 {
@@ -14,11 +15,20 @@ namespace Entry.Auth.Controllers
   {
     private readonly IAuthService _authService;
     private readonly IUserService _userService;
+    private readonly IVerificationEmailService _verificationEmailService;
+    private readonly IPasswordResetService _passwordResetService;
 
-    public AuthController(IAuthService authService, IUserService userService)
+    public AuthController(
+      IAuthService authService,
+      IUserService userService,
+      IVerificationEmailService verificationEmailService,
+      IPasswordResetService passwordResetService
+    )
     {
       _authService = authService;
       _userService = userService;
+      _verificationEmailService = verificationEmailService;
+      _passwordResetService = passwordResetService;
     }
 
     // ------------------------------------------------------
@@ -66,15 +76,10 @@ namespace Entry.Auth.Controllers
     {
       var user = await _userService.GetByEmailAsync(dto.Email!);
 
-      if (user == null)
-        return BadRequest(new { message = "User not found." });
+      if(user is not null)
+        await _verificationEmailService.TryResendVerificationEmailAsync(user);
 
-      if (user.EmailConfirmed)
-        return BadRequest(new { message = "Email already verified." });
-
-      await _authService.SendVerificationEmailAsync(user);
-
-      return Ok(new { message = "Verification email sent." });
+      return Ok(new { message = "If an account with that email exists and isn't verified yet, a new verification email has been sent." });
     }
 
     // ------------------------------------------------------
@@ -93,7 +98,11 @@ namespace Entry.Auth.Controllers
       CookieHelper.Set(Response, "accessToken", result.AccessToken!, TimeSpan.FromHours(1));
       CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, TimeSpan.FromDays(30));
 
-      return Ok(result);
+      return Ok(new
+      {
+        success = result.Success,
+        user = result.User
+      });
     }
 
     // ------------------------------------------------------
@@ -102,9 +111,14 @@ namespace Entry.Auth.Controllers
  
     [AllowAnonymous]
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] RefreshDto dto)
+    public async Task<IActionResult> Refresh()
     {
-      var result = await _authService.RefreshAsync(dto);
+      var refreshToken = Request.Cookies["refreshToken"];
+
+      if(string.IsNullOrEmpty(refreshToken))
+        return Unauthorized(new { message = "No refresh token provided.", errors = new[] { "Missing refresh token." } });
+
+      var result = await _authService.RefreshAsync(refreshToken);
 
       if (!result.Success)
         return BadRequest(new { message = "Invalid refresh token.", errors = result.Errors });
@@ -112,7 +126,43 @@ namespace Entry.Auth.Controllers
       CookieHelper.Set(Response, "accessToken", result.AccessToken!, TimeSpan.FromHours(1));
       CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, TimeSpan.FromDays(30));
 
-      return Ok(result);
+      return Ok(new { user = result.User });
+    }
+
+    // ------------------------------------------------------
+    // FORGOT PASSWORD
+    // ------------------------------------------------------
+
+    [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
+    {
+      var user = await _userService.GetByEmailAsync(dto.Email!);
+
+      if(user is not null && user.EmailConfirmed) await _passwordResetService.SendPasswordResetEmailAsync(user);
+
+      return Ok(new { message = "If an account with that email exists and is verified, a password reset email has been sent." });
+    }
+
+    // ------------------------------------------------------
+    // RESET PASSWORD
+    // ------------------------------------------------------
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
+    {
+      var user = await _userService.GetByIdAsync(dto.UserId!);
+
+      if(user == null) return BadRequest(new { message = "Invalid or expired reset link." });
+
+      var success = await _passwordResetService.ResetPasswordAsync(user, dto.Token!, dto.NewPassword!);
+
+      if(!success) return BadRequest(new { message = "Invalid or expired reset link." });
+
+      await _authService.RevokeAllUserTokensAsync(user.Id);
+
+      return Ok(new { message = "Password reset successfully." });
     }
 
     // ------------------------------------------------------

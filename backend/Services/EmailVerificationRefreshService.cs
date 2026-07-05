@@ -10,14 +10,20 @@ namespace Entry.Auth.Services
   {
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<EmailVerificationRefreshService> _logger;
+    private readonly IConfiguration _config;
+    private readonly IWebHostEnvironment _env;
 
     public EmailVerificationRefreshService(
       IServiceScopeFactory scopeFactory,
-      ILogger<EmailVerificationRefreshService> logger
+      ILogger<EmailVerificationRefreshService> logger,
+      IConfiguration config,
+      IWebHostEnvironment env
     )
     {
       _scopeFactory = scopeFactory;
       _logger = logger;
+      _config = config;
+      _env = env;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -69,7 +75,8 @@ namespace Entry.Auth.Services
         {
           var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
 
-          var link = $"http://localhost:5277/verify-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
+          var baseUrl = _env.IsDevelopment() ? "http://localhost:3000" : _config["AppUrls:FrontendBaseUrl"];
+          var link = $"{baseUrl}/auth/verify-email?userId={user.Id}&token={Uri.EscapeDataString(token)}";
 
           await emailService.SendAsync(
             user.Email!,

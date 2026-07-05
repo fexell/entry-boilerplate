@@ -6,5 +6,7 @@ namespace Entry.Auth.Services
   public interface IJwtService
   {
     JwtTokenResult GenerateToken(AppUser user);
+    string GenerateTwoFactorToken(AppUser user);
+    string? ValidateTwoFactorToken(string token);
   }
 }

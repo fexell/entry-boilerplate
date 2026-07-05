@@ -7,7 +7,7 @@ namespace Entry.Auth.Services
   {
     Task<AuthResultDto> RegisterAsync(RegisterDto dto);
     Task<AuthResultDto> LoginAsync(LoginDto dto);
-    Task<AuthResultDto> RefreshAsync(RefreshDto dto);
+    Task<AuthResultDto> RefreshAsync(string refreshToken);
     Task<AuthResultDto> SilentRefreshAsync(AppUser user, string refreshToken);
 
     Task<bool> RevokeRefreshTokenAsync(string refreshToken);

@@ -9,7 +9,16 @@ namespace Entry.Auth.Filters
     {
       if (!context.ModelState.IsValid)
       {
-        context.Result = new BadRequestObjectResult(context.ModelState);
+        var errors = context.ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .ToList();
+
+        context.Result = new BadRequestObjectResult(new
+        {
+          message = "Invalid input.",
+          errors
+        });
       }
     }
 

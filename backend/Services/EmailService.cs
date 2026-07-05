@@ -20,7 +20,7 @@ namespace Entry.Auth.Services
     {
       var payload = new
       {
-        from = "onboarding@resend.dev",
+        from = "no-reply@audwio.com",
         to = new[] { to },
         subject,
         html = htmlBody
