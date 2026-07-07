@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Identity;
+
 using Entry.Auth.Models;
 using Entry.Auth.DTOs;
 
@@ -16,7 +18,7 @@ namespace Entry.Auth.Services
     Task<string> GenerateEmailVerificationTokenAsync(AppUser user);
     Task<bool> VerifyEmailAsync(AppUser user, string token);
 
-    Task<bool> ChangePasswordAsync(AppUser user, string currentPassword, string newPassword);
+    Task<IdentityResult> ChangePasswordAsync(AppUser user, ChangePasswordDto dto);
 
     Task<UserMeDto> GetUserMeAsync(AppUser user);
   }

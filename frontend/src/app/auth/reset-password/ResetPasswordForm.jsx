@@ -58,7 +58,7 @@ const ResetPasswordForm = () => {
       <div className="w-full max-w-sm">
         {/* Eyebrow / brand mark */}
         <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
-          <span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+          <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
           ENTRY
         </div>
 
@@ -168,7 +168,7 @@ const ResetPasswordForm = () => {
 
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-300 disabled:bg-amber-400/40 disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg py-2.5 mt-2 transition-colors group"
+                className="w-full flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg py-2.5 mt-2 transition-colors group"
                 disabled={isSubmitting || !password || !confirmPassword}
               >
                 {isSubmitting ? "Resetting..." : "Reset password"}
@@ -182,7 +182,7 @@ const ResetPasswordForm = () => {
           Remember your password?{" "}
           <Link
             href="/auth/login"
-            className="text-neutral-200 hover:text-amber-400 transition-colors underline underline-offset-4 decoration-neutral-700"
+            className="text-neutral-200 hover:text-(--primary-color) transition-colors underline underline-offset-4 decoration-neutral-700"
           >
             Log in
           </Link>

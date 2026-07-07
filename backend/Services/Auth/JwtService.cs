@@ -76,11 +76,15 @@ namespace Entry.Auth.Services
         signingCredentials: creds
       );
 
+      Console.WriteLine("GENERATING 2FA TOKEN WITH SUB: ", user.Id);
+
       return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
     public string? ValidateTwoFactorToken(string token)
     {
+      Console.WriteLine("VALIDATING TOKEN: ", token);
+
       var key = new SymmetricSecurityKey(
         Encoding.UTF8.GetBytes(_config["Jwt:Key"]!)
       );
@@ -105,13 +109,24 @@ namespace Entry.Auth.Services
           out var validatedToken
         );
 
-        var purpose = principal.FindFirst("purpose")?.Value;
-        if(purpose != TwoFactorPurpose) return null;
+        Console.WriteLine("2FA PRINCIPAL CLAIMS:");
+        foreach (var c in principal.Claims)
+          Console.WriteLine($"{c.Type} = {c.Value}");
 
-        return principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var purpose = principal.FindFirst("purpose")?.Value;
+        if (purpose != TwoFactorPurpose)
+        {
+          Console.WriteLine($"Invalid 2FA purpose: {purpose}");
+          return null;
+        }
+
+        var sub = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        Console.WriteLine($"2FA SUB: {sub}");
+        return sub;
       }
-      catch
+      catch (Exception ex)
       {
+        Console.WriteLine("2FA TOKEN VALIDATION ERROR: " + ex.Message);
         return null;
       }
     }

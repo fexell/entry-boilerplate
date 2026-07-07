@@ -37,7 +37,7 @@ const SettingsLayout = ({ children }) => {
       <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-2 font-mono text-xs tracking-widest text-neutral-500">
-            <span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+            <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
             ENTRY
           </div>
 
@@ -62,13 +62,13 @@ const SettingsLayout = ({ children }) => {
                     href={href}
                     className={`flex items-center gap-2.5 shrink-0 px-3 py-2 rounded-lg text-sm border-l-2 transition-colors ${
                       isActive
-                        ? "border-amber-400 bg-neutral-900 text-neutral-100"
+                        ? "border-(--primary-color) bg-neutral-900 text-neutral-100"
                         : "border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900/50"
                     }`}
                   >
                     <Icon
                       className={`w-4 h-4 shrink-0 ${
-                        isActive ? "text-amber-400" : "text-neutral-600"
+                        isActive ? "text-(--primary-color)" : "text-neutral-600"
                       }`}
                     />
                     {label}

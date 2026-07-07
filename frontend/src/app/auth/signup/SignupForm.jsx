@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Mail, User, Lock, Eye, EyeOff, ArrowRight, CircleAlert, CircleCheck } from "lucide-react"
 import api from "@/lib/api"
 
-const SignupPage = () => {
+const SignupForm = () => {
   const [formData, setFormData] = useState({
     email: "",
     username: "",
@@ -41,7 +41,7 @@ const SignupPage = () => {
     <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
-          <span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+          <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
           ENTRY
         </div>
 
@@ -155,7 +155,7 @@ const SignupPage = () => {
 
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-300 disabled:bg-amber-400/40 disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg py-2.5 mt-2 transition-colors group"
+                className="w-full flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg py-2.5 mt-2 transition-colors group"
                 disabled={isSubmitting || (!formData.email || !formData.username || !formData.password)}
               >
                 {isSubmitting ? "Signing up..." : "Create account"}
@@ -167,7 +167,7 @@ const SignupPage = () => {
               Already have an account?{" "}
               <Link
                 href="/auth/login"
-                className="text-neutral-200 hover:text-amber-400 transition-colors underline underline-offset-4 decoration-neutral-700"
+                className="text-neutral-200 hover:text-(--primary-color) transition-colors underline underline-offset-4 decoration-neutral-700"
               >
                 Log in
               </Link>
@@ -179,4 +179,4 @@ const SignupPage = () => {
   )
 }
 
-export default SignupPage
+export default SignupForm

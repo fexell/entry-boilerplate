@@ -59,5 +59,29 @@ namespace Entry.Auth.Controllers
 
       return Ok(me);
     }
+
+    [HttpPatch("password")]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
+    {
+      var userId = User.GetUserId();
+      var user = await _userService.GetByIdAsync(userId);
+
+      if(user == null) return NotFound();
+      
+      var result = await _userService.ChangePasswordAsync(user, dto);
+
+      if (!result.Succeeded)
+      {
+        return BadRequest(new
+        {
+          errors = result.Errors.Select(e => e.Description).ToList()
+        });
+      }
+
+      var currentRefreshToken = Request.Cookies["refreshToken"];
+      await _refreshTokenService.RevokeAllSessionsExceptCurrentAsync(userId, currentRefreshToken);
+
+      return NoContent();
+    }
   }
 }

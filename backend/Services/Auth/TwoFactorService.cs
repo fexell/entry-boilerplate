@@ -51,7 +51,8 @@ namespace Entry.Auth.Services
 
     public async Task<IEnumerable<string>> GenerateRecoveryCodesAsync(AppUser user)
     {
-      return await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+      var codes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+      return codes ?? Enumerable.Empty<string>();
     }
 
     private static string GenerateQrCodeUri(string email, string unformattedKey)
@@ -62,6 +63,38 @@ namespace Entry.Auth.Services
         Uri.EscapeDataString(email),
         unformattedKey
       );
+    }
+
+    public async Task<bool> VerifyCodeAsync(AppUser user, string code)
+    {
+      return await _userManager.VerifyTwoFactorTokenAsync(
+        user,
+        _userManager.Options.Tokens.AuthenticatorTokenProvider,
+        code
+      );
+    }
+
+    public async Task<bool> VerifyRecoveryCodeAsync(AppUser user, string recoveryCode)
+    {
+      var result = await _userManager.RedeemTwoFactorRecoveryCodeAsync(user, recoveryCode);
+
+      return result.Succeeded;
+    }
+
+    public async Task<bool> DisableAsync(AppUser user, string code)
+    {
+      var isValid = await _userManager.VerifyTwoFactorTokenAsync(
+        user,
+        TokenOptions.DefaultAuthenticatorProvider,
+        code
+      );
+
+      if(!isValid) return false;
+
+      await _userManager.SetTwoFactorEnabledAsync(user, false);
+      await _userManager.ResetAuthenticatorKeyAsync(user);
+
+      return true;
     }
 
     private static string FormatKey(string unformattedKey)

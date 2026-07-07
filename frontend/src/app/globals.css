@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+:root {
+  --primary-color: #ffba00;
+  --primary-color-hover: #ecd56d;
+  --primary-color-disabled: #FFBA0066;
+  --primary-color-10: rgba(255, 186, 0, 0.1);
+  --primary-color-20: rgba(255, 186, 0, 0.2);
+  --primary-color-60: rgba(255, 186, 0, 0.6);
+}
+
 button:not(:disabled) {
   cursor: pointer;
 }

@@ -39,7 +39,7 @@ const ResendVerificationForm = () => {
       <div className="w-full max-w-sm">
         {/* Eyebrow / brand mark */}
         <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
-          <span className="inline-block w-1.5 h-1.5 bg-amber-400 rounded-full animate-pulse" />
+          <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
           ENTRY
         </div>
 
@@ -88,7 +88,7 @@ const ResendVerificationForm = () => {
                     type="email"
                     placeholder="you@example.com"
                     autoComplete="email"
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
+                    className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-(--primary-color-60) focus:ring-2 focus:ring-(--primary-color-10)"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -97,7 +97,7 @@ const ResendVerificationForm = () => {
 
               <button
                 type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-amber-400 hover:bg-amber-300 disabled:bg-amber-400/40 disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg py-2.5 mt-2 transition-colors group"
+                className="w-full flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg py-2.5 mt-2 transition-colors group"
                 disabled={isSubmitting || !email}
               >
                 {isSubmitting ? "Sending..." : "Send verification link"}
@@ -111,7 +111,7 @@ const ResendVerificationForm = () => {
           Already verified?{" "}
           <Link
             href="/auth/login"
-            className="text-neutral-200 hover:text-amber-400 transition-colors underline underline-offset-4 decoration-neutral-700"
+            className="text-neutral-200 hover:text-(--primary-color) transition-colors underline underline-offset-4 decoration-neutral-700"
           >
             Log in
           </Link>

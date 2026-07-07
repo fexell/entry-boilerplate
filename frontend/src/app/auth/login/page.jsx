@@ -3,7 +3,7 @@
 import LoginForm from "./LoginForm";
 
 export const metadata = {
-  title: "Login | Your App Name",
+  title: "Login | " + process.env.NEXT_PUBLIC_APP_NAME,
 }
 
 export default function LoginPage() {

@@ -32,5 +32,6 @@ namespace Entry.Auth.DTOs
     public string? LastName { get; set; }
 
     public bool Premium { get; set; }
+    public bool TwoFactorEnabled { get; set; }
   }
 }

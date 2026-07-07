@@ -127,14 +127,9 @@ namespace Entry.Auth.Services
     // PASSWORD CHANGE
     // ------------------------------------------------------
 
-    public async Task<bool> ChangePasswordAsync(AppUser user, string currentPassword, string newPassword)
+    public async Task<IdentityResult> ChangePasswordAsync(AppUser user, ChangePasswordDto dto)
     {
-      var result = await _userManager.ChangePasswordAsync(user, currentPassword, newPassword);
-
-      if (result.Succeeded)
-        await _refreshTokenService.RevokeAllUserTokensAsync(user.Id);
-
-      return result.Succeeded;
+      return await _userManager.ChangePasswordAsync(user, dto.CurrentPassword, dto.NewPassword);
     }
 
     // ------------------------------------------------------
@@ -153,7 +148,8 @@ namespace Entry.Auth.Services
         Avatar = user.Avatar,
         FirstName = user.FirstName,
         LastName = user.LastName,
-        Premium = user.Premium
+        Premium = user.Premium,
+        TwoFactorEnabled = user.TwoFactorEnabled
       };
     }
   }

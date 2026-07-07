@@ -92,8 +92,46 @@ namespace Entry.Auth.Controllers
     {
       var result = await _authService.LoginAsync(dto);
 
+      // ❗ 1. Om 2FA krävs → returnera direkt utan cookies
+      if (result.RequiresTwoFactor)
+      {
+        return Ok(new
+        {
+          requiresTwoFactor = true,
+          twoFactorToken = result.TwoFactorToken
+        });
+      }
+
+      // ❗ 2. Om login misslyckas → returnera fel
       if (!result.Success)
-        return Unauthorized(new { message = "Invalid credentials.", errors = result.Errors });
+      {
+        return Unauthorized(new
+        {
+          message = "Invalid credentials.",
+          errors = result.Errors
+        });
+      }
+
+      // ❗ 3. Sätt cookies (nu vet vi att AccessToken & RefreshToken INTE är null)
+      CookieHelper.Set(Response, "accessToken", result.AccessToken!, TimeSpan.FromHours(1));
+      CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, TimeSpan.FromDays(30));
+
+      // ❗ 4. Returnera user-info
+      return Ok(new
+      {
+        success = true,
+        user = result.User
+      });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("2fa/verify-login")]
+    public async Task<IActionResult> VerifyTwoFactorLogin([FromBody] VerifyTwoFactorLoginDto dto)
+    {
+      var result = await _authService.VerifyTwoFactorLoginAsync(dto);
+
+      if (!result.Success)
+        return Unauthorized(new { message = "Verification failed.", errors = result.Errors });
 
       CookieHelper.Set(Response, "accessToken", result.AccessToken!, TimeSpan.FromHours(1));
       CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, TimeSpan.FromDays(30));

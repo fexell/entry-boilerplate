@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 
 const PROTECTED_PATHS = ["/settings"]
 
-export function middleware(request) {
+export function proxy(request) {
   const { pathname } = request.nextUrl
 
   const isProtected = PROTECTED_PATHS.some(

@@ -15,6 +15,7 @@ namespace Entry.Auth.Services
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly IUserService _userService;
     private readonly IVerificationEmailService _verificationEmailService;
+    private readonly ITwoFactorService _twoFactorService;
     private readonly AppDbContext _db;
 
     public AuthService(
@@ -24,6 +25,7 @@ namespace Entry.Auth.Services
       IRefreshTokenService refreshTokenService,
       IUserService userService,
       IVerificationEmailService verificationEmailService,
+      ITwoFactorService twoFactorService,
       AppDbContext db
     )
     {
@@ -33,6 +35,7 @@ namespace Entry.Auth.Services
       _refreshTokenService = refreshTokenService;
       _userService = userService;
       _verificationEmailService = verificationEmailService;
+      _twoFactorService = twoFactorService;
       _db = db;
     }
 
@@ -272,6 +275,46 @@ namespace Entry.Auth.Services
         ExpiresIn = jwt.ExpiresInSeconds,
         User = userMe
       };
+    }
+
+    public async Task<AuthResultDto> VerifyTwoFactorLoginAsync(VerifyTwoFactorLoginDto dto)
+    {
+      var userId = _jwtService.ValidateTwoFactorToken(dto.TwoFactorToken);
+
+      if(userId is null)
+      {
+        return new AuthResultDto
+        {
+          Success = false,
+          Errors = new List<string> { "Your session has expired." }
+        };
+      }
+
+      var user = await _userManager.FindByIdAsync(userId);
+
+      if(user == null)
+      {
+        return new AuthResultDto
+        {
+          Success = false,
+          Errors = new List<string> { "Your session has expired. Please log in again." }
+        };
+      }
+
+      var verified = dto.IsRecoveryCode
+        ? await _twoFactorService.VerifyRecoveryCodeAsync(user, dto.Code)
+        : await _twoFactorService.VerifyCodeAsync(user, dto.Code);
+
+      if (!verified)
+      {
+        return new AuthResultDto
+        {
+          Success = false,
+          Errors = new List<string> { "Invalid verification code." }
+        };
+      }
+
+      return await GenerateAuthResultAsync(user);
     }
   }
 }

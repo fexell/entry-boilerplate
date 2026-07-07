@@ -21,6 +21,22 @@ namespace Entry.Auth.Controllers
     }
 
     // ------------------------------------------------------
+    // GET /api/user/{username}
+    // ------------------------------------------------------
+
+    [AllowAnonymous]
+    [HttpGet("{username}")]
+    public async Task<IActionResult> GetByUsername(string username)
+    {
+      var user = await _userService.GetByUsernameAsync(username);
+
+      if (user == null)
+        return NotFound(new { message = "User not found." });
+
+      return Ok(user);
+    }
+
+    // ------------------------------------------------------
     // GET /api/user/me
     // ------------------------------------------------------
 

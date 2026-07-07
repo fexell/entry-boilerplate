@@ -21,7 +21,7 @@ namespace Entry.Auth.Controllers
       _twoFactorService = twoFactorService;
     }
 
-    [HttpGet("setup")]
+    [HttpPost("setup")]
     public async Task<IActionResult> GetSetup()
     {
       var user = await _userManager.GetUserAsync(User);
@@ -48,7 +48,22 @@ namespace Entry.Auth.Controllers
 
       return Ok(new { recoveryCodes });
     }
+
+    [HttpPost("disable")]
+    public async Task<IActionResult> Disable([FromBody] DisableTwoFactorRequest request)
+    {
+      var user = await _userManager.GetUserAsync(User);
+
+      if(user is null) return Unauthorized();
+
+      var success = await _twoFactorService.DisableAsync(user, request.Code);
+
+      if(!success) return BadRequest(new { error = "Invalid verification code" });
+
+      return Ok(new { success = true, message = "2FA disabled successfully." });
+    }
   }
 
   public record VerifyTwoFactorSetupRequest(string Code);
+  public record DisableTwoFactorRequest(string Code);
 }

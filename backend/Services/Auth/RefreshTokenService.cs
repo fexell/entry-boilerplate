@@ -191,6 +191,35 @@ namespace Entry.Auth.Services
       return true;
     }
 
+    public async Task RevokeAllSessionsExceptCurrentAsync(string userId, string? currentRefreshToken)
+    {
+      Guid? currentSessionId = null;
+
+      if (!string.IsNullOrEmpty(currentRefreshToken))
+      {
+        var currentToken = await _db.RefreshTokens
+          .FirstOrDefaultAsync(t => t.Token == currentRefreshToken && t.UserId == userId);
+
+          currentSessionId = currentToken?.SessionId;
+      }
+
+      var sessions = await _db.UserSessions
+        .Include(s => s.RefreshTokens)
+        .Where(s => s.UserId == userId && s.RevokedAt == null)
+        .Where(s => currentSessionId == null || s.Id != currentSessionId)
+        .ToListAsync();
+
+      foreach(var session in sessions)
+      {
+        session.RevokedAt = DateTime.UtcNow;
+
+        foreach(var t in session.RefreshTokens.Where(t => !t.Revoked))
+          t.Revoked = true;
+      }
+
+      await _db.SaveChangesAsync();
+    }
+
     private static string DescribeDevice(string? userAgent)
     {
       if (string.IsNullOrWhiteSpace(userAgent)) return "Unknown device";

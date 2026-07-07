@@ -20,5 +20,6 @@ namespace Entry.Auth.Services
 
     Task<IEnumerable<SessionDto>> GetActiveSessionsAsync(string userId, string? currentRefreshToken);
     Task<bool> RevokeSessionAsync(string userId, Guid sessionId);
+    Task RevokeAllSessionsExceptCurrentAsync(string userId, string? currentRefreshToken);
   }
 }
