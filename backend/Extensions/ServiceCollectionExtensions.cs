@@ -141,6 +141,7 @@ namespace Entry.Auth.Extensions
       services.AddScoped<IRefreshTokenService, RefreshTokenService>();
       services.AddScoped<ITwoFactorService, TwoFactorService>();
       services.AddScoped<IBruteForceService, BruteForceService>();
+      services.AddScoped<ILoginRiskService, LoginRiskService>();
 
       services.AddHostedService<EmailVerificationRefreshService>();
 

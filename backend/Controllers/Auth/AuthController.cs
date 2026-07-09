@@ -22,6 +22,7 @@ namespace Entry.Auth.Controllers
     private readonly IBruteForceService _bruteForceService;
     private readonly ITwoFactorService _twoFactorService;
     private readonly IAntiforgery _antiforgery;
+    private readonly ILoginRiskService _loginRiskService;
 
     public AuthController(
       IAuthService authService,
@@ -30,7 +31,8 @@ namespace Entry.Auth.Controllers
       IPasswordResetService passwordResetService,
       IBruteForceService bruteForceService,
       ITwoFactorService twoFactorService,
-      IAntiforgery antiforgery
+      IAntiforgery antiforgery,
+      ILoginRiskService loginRiskService
     )
     {
       _authService = authService;
@@ -40,6 +42,7 @@ namespace Entry.Auth.Controllers
       _bruteForceService = bruteForceService;
       _twoFactorService = twoFactorService;
       _antiforgery = antiforgery;
+      _loginRiskService = loginRiskService;
     }
 
     // ------------------------------------------------------
@@ -142,6 +145,40 @@ namespace Entry.Auth.Controllers
       // -----------------------------
       var result = await _authService.LoginAsync(dto);
 
+      // -----------------------------
+      // 2.1. RISK ASSESSMENT
+      // -----------------------------
+
+      var deviceFingerprint = dto.DeviceFingerprint;
+      var risk = await _loginRiskService.EvaluateAsync(user, ip, deviceFingerprint);
+
+      // -----------------------------
+      // 2.2. HANDLE RISK
+      // -----------------------------
+
+      if(risk.RiskLevel == "High")
+      {
+        return Ok(new
+        {
+          requiresTwoFactor = true,
+          reason = "suspicious_login",
+          twoFactorToken = result.TwoFactorToken
+        });
+      }
+
+      if(risk.RiskLevel == "Medium" && !result.RequiresTwoFactor)
+      {
+        if (user.TwoFactorEnabled)
+        {
+          return Ok(new
+          {
+            requiresTwoFactor = true,
+            reason = "medium_risk",
+            twoFactorToken = result.TwoFactorToken
+          });
+        }
+      }
+
       await _bruteForceService.LogAsync(
         endpoint: "login",
         ip: ip,
@@ -181,7 +218,17 @@ namespace Entry.Auth.Controllers
       CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, TimeSpan.FromDays(30));
 
       // -----------------------------
-      // 7. RETURN USER AND MESSAGE
+      // 7. UPDATE USER
+      // -----------------------------
+
+      user.LastKnownIp = ip;
+      user.LastKnownCountry = risk.Country;
+      user.LastKnownDeviceFingerprint = deviceFingerprint;
+
+      await _userService.UpdateAsync(user);
+
+      // -----------------------------
+      // 8. RETURN USER AND MESSAGE
       // -----------------------------
       return Ok(new
       {

@@ -19,5 +19,9 @@ namespace Entry.Auth.Models
     public DateTime? LastVerificationEmailSentAt { get; set; }
 
     public ICollection<UserSession> Sessions { get; set; } = new List<UserSession>();
+
+    public string? LastKnownIp { get; set; }
+    public string? LastKnownCountry { get; set; }
+    public string? LastKnownDeviceFingerprint { get; set; }
   }
 }

@@ -13,6 +13,7 @@ namespace Entry.Auth.Data
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<UserSession> UserSessions { get; set; }
     public DbSet<AuthAttempt> AuthAttempts { get; set; }
+    public DbSet<LoginRiskAssessment> LoginRiskAssessments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -81,6 +82,19 @@ namespace Entry.Auth.Data
 
         entity.Property(x => x.IpAddress).IsRequired();
         entity.Property(x => x.Endpoint).IsRequired();
+      });
+
+      builder.Entity<LoginRiskAssessment>(entity =>
+      {
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.IpAddress).HasMaxLength(64);
+        entity.Property(x => x.Country).HasMaxLength(64);
+        entity.Property(x => x.DeviceFingerprint).HasMaxLength(256);
+        entity.Property(x => x.RiskLevel).HasMaxLength(32);
+
+        entity.HasIndex(x => x.UserId);
+        entity.HasIndex(x => x.IpAddress);
       });
     }
   }

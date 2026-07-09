@@ -7,6 +7,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, CircleAlert, KeyRound } from "luci
 
 import api from "@/lib/api"
 import useAuthStore from "@/store/useAuthStore"
+import { getDeviceFingerprint } from "@/components/Utils/DeviceFingerprint"
 
 const REMEMBERED_EMAIL_KEY = "email"
 
@@ -37,10 +38,15 @@ const LoginForm = () => {
     setIsSubmitting(true)
 
     try {
+      const deviceFingerprint = await getDeviceFingerprint()
+
       const data = await api("/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          deviceFingerprint,
+        }),
       })
 
       if (data.requiresTwoFactor) {

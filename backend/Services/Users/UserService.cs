@@ -50,6 +50,13 @@ namespace Entry.Auth.Services
     // UPDATE USER
     // ------------------------------------------------------
 
+    public async Task<bool> UpdateAsync(AppUser user)
+    {
+      var result = await _userManager.UpdateAsync(user);
+
+      return result.Succeeded;
+    }
+
     public async Task<bool> UpdateUserAsync(AppUser user, UserUpdateDto dto)
     {
       var updated = false;

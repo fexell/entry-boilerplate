@@ -11,6 +11,7 @@ namespace Entry.Auth.Services
     Task<AppUser?> GetByEmailAsync(string email);
     Task<AppUser?> GetByUsernameAsync(string username);
 
+    Task<bool> UpdateAsync(AppUser user);
     Task<bool> UpdateUserAsync(AppUser user, UserUpdateDto updateDto);
     Task<UserDeleteResult> DeleteUserAsync(AppUser user, string password);
 

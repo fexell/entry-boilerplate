@@ -13,5 +13,7 @@ namespace Entry.Auth.DTOs
     [MaxLength(128, ErrorMessage = "Password cannot exceed 128 characters.")]
     [DataType(DataType.Password)]
     public string? Password { get; set; }
+
+    public string? DeviceFingerprint { get; set; }
   }
 }
