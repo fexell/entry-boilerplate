@@ -12,6 +12,7 @@ namespace Entry.Auth.Data
 
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<UserSession> UserSessions { get; set; }
+    public DbSet<AuthAttempt> AuthAttempts { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -67,6 +68,19 @@ namespace Entry.Auth.Data
               .WithMany(u => u.Sessions)
               .HasForeignKey(x => x.UserId)
               .OnDelete(DeleteBehavior.Cascade);
+      });
+
+      builder.Entity<AuthAttempt>(entity =>
+      {
+        entity.ToTable("AuthAttempts");
+
+        entity.HasIndex(x => x.IpAddress);
+        entity.HasIndex(x => x.Email);
+        entity.HasIndex(x => x.Endpoint);
+        entity.HasIndex(x => x.Timestamp);
+
+        entity.Property(x => x.IpAddress).IsRequired();
+        entity.Property(x => x.Endpoint).IsRequired();
       });
     }
   }

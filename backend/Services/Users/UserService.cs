@@ -53,16 +53,6 @@ namespace Entry.Auth.Services
     public async Task<bool> UpdateUserAsync(AppUser user, UserUpdateDto dto)
     {
       var updated = false;
-      var emailChanged = false;
-
-      if (!string.IsNullOrWhiteSpace(dto.Email) && dto.Email != user.Email)
-      {
-        user.Email = dto.Email;
-        await _userManager.UpdateNormalizedEmailAsync(user);
-        user.EmailConfirmed = false;
-        updated = true;
-        emailChanged = true;
-      }
 
       if (!string.IsNullOrWhiteSpace(dto.Username) && dto.Username != user.UserName)
       {
@@ -87,9 +77,6 @@ namespace Entry.Auth.Services
 
       var result = await _userManager.UpdateAsync(user);
 
-      if (result.Succeeded && emailChanged)
-        await _verificationEmailService.SendVerificationEmailAsync(user);
-
       return result.Succeeded;
     }
 
@@ -97,10 +84,15 @@ namespace Entry.Auth.Services
     // DELETE USER
     // ------------------------------------------------------
 
-    public async Task<bool> DeleteUserAsync(AppUser user)
+    public async Task<UserDeleteResult> DeleteUserAsync(AppUser user, string password)
     {
+      var passwordValid = await _userManager.CheckPasswordAsync(user, password);
+
+      if (!passwordValid) return UserDeleteResult.InvalidPassword;
+
       var result = await _userManager.DeleteAsync(user);
-      return result.Succeeded;
+
+      return result.Succeeded ? UserDeleteResult.Success : UserDeleteResult.Failed;
     }
 
     // ------------------------------------------------------
@@ -151,6 +143,20 @@ namespace Entry.Auth.Services
         Premium = user.Premium,
         TwoFactorEnabled = user.TwoFactorEnabled
       };
+    }
+
+    public Task<PublicUserDto> GetPublicUserAsync(AppUser user)
+    {
+      return Task.FromResult(new PublicUserDto
+      {
+        Id = user.Id,
+        Username = user.UserName!,
+        FirstName = user.FirstName,
+        LastName = user.LastName,
+        Avatar = user.Avatar,
+        CreatedAt = user.CreatedAt,
+        Premium = user.Premium
+      });
     }
   }
 }

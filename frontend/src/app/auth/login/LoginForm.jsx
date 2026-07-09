@@ -52,7 +52,6 @@ const LoginForm = () => {
       setUser(data.user)
       router.push("/")
     } catch (err) {
-      console.log(err.errors)
       setErrors(err.errors?.length ? err.errors : [err.message])
     } finally {
       setIsSubmitting(false)
@@ -63,8 +62,6 @@ const LoginForm = () => {
     e.preventDefault()
     setErrors([])
     setIsVerifying(true)
-
-    console.log("TOKEN LENGTH: ", twoFactorToken.length)
 
     try {
       const payload = {
@@ -123,11 +120,12 @@ const LoginForm = () => {
 
   if (requiresTwoFactor) {
     return (
-      <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
+      <div
+        className="min-h-screen flex items-center justify-center px-4">
         <div className="w-full max-w-sm">
           <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
             <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
-            ENTRY
+            {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()}
           </div>
 
           <div className="mb-8">
@@ -201,13 +199,28 @@ const LoginForm = () => {
           >
             {useRecoveryCode ? "Use authenticator code instead" : "Use a recovery code instead"}
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setRequiresTwoFactor(false)
+              setTwoFactorToken("")
+              setTwoFaCode("")
+              setUseRecoveryCode(false)
+              setErrors([])
+            }}
+            className="mt-3 w-full text-center text-xs text-neutral-600 hover:text-neutral-400 transition-colors"
+          >
+            Back to login
+          </button>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
+    <div
+      className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
           <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />

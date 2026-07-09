@@ -46,7 +46,7 @@ namespace Entry.Auth.Controllers
 
       var recoveryCodes = await _twoFactorService.GenerateRecoveryCodesAsync(user);
 
-      return Ok(new { recoveryCodes });
+      return Ok(new { recoveryCodes, success = true, message = "2FA enabled successfully." });
     }
 
     [HttpPost("disable")]
@@ -62,8 +62,25 @@ namespace Entry.Auth.Controllers
 
       return Ok(new { success = true, message = "2FA disabled successfully." });
     }
+
+    [HttpPost("recovery-codes/regenerate")]
+    public async Task<IActionResult> RegenerateRecoveryCodes([FromBody] RegenerateRecoveryCodesRequest request)
+    {
+      var user = await _userManager.GetUserAsync(User);
+
+      if(user is null) return Unauthorized();
+
+      var isValid = await _twoFactorService.VerifyCodeAsync(user, request.Code);
+
+      if(!isValid) return BadRequest(new { error = "Invalid verification code" });
+
+      var recoveryCodes = await _twoFactorService.GenerateRecoveryCodesAsync(user);
+
+      return Ok(new { recoveryCodes, success = true, message = "Recovery codes regenerated successfully." });
+    }
   }
 
   public record VerifyTwoFactorSetupRequest(string Code);
   public record DisableTwoFactorRequest(string Code);
+  public record RegenerateRecoveryCodesRequest(string Code);
 }

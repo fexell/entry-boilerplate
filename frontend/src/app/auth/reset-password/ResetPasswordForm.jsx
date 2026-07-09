@@ -59,7 +59,7 @@ const ResetPasswordForm = () => {
         {/* Eyebrow / brand mark */}
         <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
           <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
-          ENTRY
+          {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()}
         </div>
 
         <div className="mb-8">

@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
 using System;
+using System.Security.Claims;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
+using System.IdentityModel.Tokens.Jwt;
 
 using Entry.Auth.Models;
 
@@ -63,6 +66,26 @@ namespace Entry.Auth.Services
         Uri.EscapeDataString(email),
         unformattedKey
       );
+    }
+
+    public string? GetUserIdFromTwoFactorToken(string token)
+    {
+      var handler = new JwtSecurityTokenHandler();
+
+      try
+      {
+        var jwt = handler.ReadJwtToken(token);
+
+        var userId =
+          jwt.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value ??
+          jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+
+        return userId;
+      }
+      catch
+      {
+        return null;
+      }
     }
 
     public async Task<bool> VerifyCodeAsync(AppUser user, string code)

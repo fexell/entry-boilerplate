@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
 using System.Globalization;
+using System.Threading.RateLimiting;
 
 using Entry.Auth.Extensions;
 using Entry.Auth.Services;
@@ -32,6 +33,7 @@ builder.Services
     .AddAppIdentity()
     .AddJwtAuthentication(builder.Configuration)
     .AddAppServices()
+    .AddAppAntiforgery(builder.Environment)
     .AddAppAuthorization();
 
 // builder.Services.AddHttpClient<IEmailService, EmailService>();
@@ -39,6 +41,7 @@ builder.Services
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationFilter>();
+    options.Filters.Add<AntiforgeryFilter>();
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -69,6 +72,37 @@ builder.Services.Configure<RequestLocalizationOptions>(options =>
 });
 
 // -----------------------------------------------------
+// Rate Limiter
+// -----------------------------------------------------
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        context.HttpContext.Response.ContentType = "application/json";
+
+        await context.HttpContext.Response.WriteAsJsonAsync(new
+        {
+            message = "Too many requests. Please try again later.",
+            errors = new[] { "Rate limit exceeded." }
+        }, token);
+    };
+
+    options.AddPolicy("AuthPolicy", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: key => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,                 // 10 försök
+                Window = TimeSpan.FromMinutes(1), // per minut
+                SegmentsPerWindow = 2,
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
+
+// -----------------------------------------------------
 // Build
 // -----------------------------------------------------
 var app = builder.Build();
@@ -83,6 +117,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
+// Brute force protection
+app.UseMiddleware<BruteForceMiddleware>();
+
 app.UseCors("Frontend");
 
 // Silent refresh BEFORE authentication
@@ -90,6 +127,9 @@ app.UseCors("Frontend");
 
 var locOptions = app.Services.GetRequiredService<IOptions<RequestLocalizationOptions>>();
 app.UseRequestLocalization(locOptions.Value);
+
+// Rate limiter
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

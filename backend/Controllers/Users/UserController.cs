@@ -33,7 +33,9 @@ namespace Entry.Auth.Controllers
       if (user == null)
         return NotFound(new { message = "User not found." });
 
-      return Ok(user);
+      var dto = await _userService.GetPublicUserAsync(user);
+
+      return Ok(dto);
     }
 
     // ------------------------------------------------------
@@ -90,20 +92,22 @@ namespace Entry.Auth.Controllers
     // ------------------------------------------------------
 
     [HttpDelete("delete")]
-    public async Task<IActionResult> Delete()
+    public async Task<IActionResult> Delete([FromBody] DeleteAccountDto dto)
     {
       var userId = User.GetUserId();
 
       var user = await _userService.GetByIdAsync(userId);
-      if (user == null)
-        return Unauthorized();
 
-      var result = await _userService.DeleteUserAsync(user);
+      if(user == null) return Unauthorized();
 
-      if (!result)
-        return BadRequest(new { message = "Failed to delete user." });
+      var result = await _userService.DeleteUserAsync(user, dto.Password);
 
-      return Ok(new { message = "User deleted successfully." });
+      return result switch
+      {
+        UserDeleteResult.Success => Ok(new { message = "User deleted successfully." }),
+        UserDeleteResult.InvalidPassword => BadRequest(new { message = "Invalid password." }),
+        _ => BadRequest(new { message = "Failed to delete user." }),
+      };
     }
   }
 }

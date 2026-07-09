@@ -3,7 +3,9 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { User, ShieldCheck, Monitor, ArrowLeft } from "lucide-react"
+import { User, ShieldCheck, Monitor, ArrowLeft, TriangleAlert, LogOut } from "lucide-react"
+
+import LogoutButton from "@/components/Utils/LogoutButton"
 
 import { getBackHref } from '@/hooks/useBackHref'
 import useAuthStore from "@/store/useAuthStore"
@@ -12,21 +14,35 @@ const navItems = [
   { href: "/settings", label: "Profile", icon: User },
   { href: "/settings/security", label: "Security", icon: ShieldCheck },
   { href: "/settings/sessions", label: "Sessions", icon: Monitor },
+  { href: "/settings/danger", label: "Danger Zone", icon: TriangleAlert },
 ]
 
 const SettingsLayout = ({ children }) => {
   const pathname = usePathname()
   const router = useRouter()
   const [backHref, setBackHref] = useState("/")
-  const { isAuthenticated, isInitialized } = useAuthStore()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const { isAuthenticated, isInitialized, logout } = useAuthStore()
 
   useEffect(() => {
     setBackHref(getBackHref(pathname))
   }, [])
 
+  const handleLogout = async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    try {
+      await logout()
+      router.push("/?from=logout&loggedOut=true")
+    } catch (err) {
+      console.error("Logout failed:", err)
+      setIsLoggingOut(false)
+    }
+  }
+
   useEffect(() => {
     if(isInitialized && !isAuthenticated) {
-      router.replace(`/login?from=${pathname}`)
+      router.replace(`/?from=${pathname}`)
     }
   }, [isInitialized, isAuthenticated, pathname, router])
 
@@ -38,7 +54,7 @@ const SettingsLayout = ({ children }) => {
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-2 font-mono text-xs tracking-widest text-neutral-500">
             <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
-            ENTRY
+            {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()}
           </div>
 
           <Link
@@ -75,6 +91,10 @@ const SettingsLayout = ({ children }) => {
                   </Link>
                 )
               })}
+
+              <div className="hidden sm:block h-px bg-neutral-800 my-2" />
+
+              <LogoutButton className="flex items-center gap-2.5 shrink-0 px-3 py-2 rounded-lg text-sm border-l-2 border-transparent text-neutral-500 hover:text-neutral-300 hover:bg-neutral-900/50" />
             </nav>
           </aside>
 

@@ -12,7 +12,7 @@ namespace Entry.Auth.Services
     Task<AppUser?> GetByUsernameAsync(string username);
 
     Task<bool> UpdateUserAsync(AppUser user, UserUpdateDto updateDto);
-    Task<bool> DeleteUserAsync(AppUser user);
+    Task<UserDeleteResult> DeleteUserAsync(AppUser user, string password);
 
     Task<bool> IsEmailConfirmedAsync(AppUser user);
     Task<string> GenerateEmailVerificationTokenAsync(AppUser user);
@@ -21,5 +21,6 @@ namespace Entry.Auth.Services
     Task<IdentityResult> ChangePasswordAsync(AppUser user, ChangePasswordDto dto);
 
     Task<UserMeDto> GetUserMeAsync(AppUser user);
+    Task<PublicUserDto> GetPublicUserAsync(AppUser user);
   }
 }

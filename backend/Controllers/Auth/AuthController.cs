@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.RateLimiting;
 
 using Entry.Auth.DTOs;
 using Entry.Auth.Models;
@@ -17,18 +19,40 @@ namespace Entry.Auth.Controllers
     private readonly IUserService _userService;
     private readonly IVerificationEmailService _verificationEmailService;
     private readonly IPasswordResetService _passwordResetService;
+    private readonly IBruteForceService _bruteForceService;
+    private readonly ITwoFactorService _twoFactorService;
+    private readonly IAntiforgery _antiforgery;
 
     public AuthController(
       IAuthService authService,
       IUserService userService,
       IVerificationEmailService verificationEmailService,
-      IPasswordResetService passwordResetService
+      IPasswordResetService passwordResetService,
+      IBruteForceService bruteForceService,
+      ITwoFactorService twoFactorService,
+      IAntiforgery antiforgery
     )
     {
       _authService = authService;
       _userService = userService;
       _verificationEmailService = verificationEmailService;
       _passwordResetService = passwordResetService;
+      _bruteForceService = bruteForceService;
+      _twoFactorService = twoFactorService;
+      _antiforgery = antiforgery;
+    }
+
+    // ------------------------------------------------------
+    // CSRF TOKEN
+    // ------------------------------------------------------
+
+    [AllowAnonymous]
+    [HttpGet("csrf-token")]
+    public IActionResult GetCsrfToken()
+    {
+      var tokens = _antiforgery.GetAndStoreTokens(HttpContext);
+
+      return Ok(new { csrfToken = tokens.RequestToken });
     }
 
     // ------------------------------------------------------
@@ -88,11 +112,47 @@ namespace Entry.Auth.Controllers
 
     [AllowAnonymous]
     [HttpPost("login")]
+    [EnableRateLimiting("AuthPolicy")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
+      var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+      // -----------------------------
+      // 1. BRUTE-FORCE CHECKS
+      // -----------------------------
+
+      if(await _bruteForceService.IsIpBlocked(ip))
+      {
+        return StatusCode(429, new { message = "Too many requests from this IP. Please try again later." });
+      }
+
+      if(!string.IsNullOrWhiteSpace(dto.Email) && await _bruteForceService.IsEmailBlocked(dto.Email))
+      {
+        return StatusCode(429, new { message = "Too many requests from this email. Please try again later." });
+      }
+
+      var user = await _userService.GetByEmailAsync(dto.Email!);
+      if(user != null && await _bruteForceService.IsUserBlocked(user.Id))
+      {
+        return StatusCode(429, new { message = "Too many requests from this user. Please try again later." });
+      }
+
+      // -----------------------------
+      // 2. RUN LOGIN LOGIC
+      // -----------------------------
       var result = await _authService.LoginAsync(dto);
 
-      // ❗ 1. Om 2FA krävs → returnera direkt utan cookies
+      await _bruteForceService.LogAsync(
+        endpoint: "login",
+        ip: ip,
+        email: dto.Email,
+        userId: user?.Id,
+        success: result.Success
+      );
+
+      // -----------------------------
+      // 3. 2FA REQUIRED -> RETURN
+      // -----------------------------
       if (result.RequiresTwoFactor)
       {
         return Ok(new
@@ -102,7 +162,9 @@ namespace Entry.Auth.Controllers
         });
       }
 
-      // ❗ 2. Om login misslyckas → returnera fel
+      // -----------------------------
+      // 5. FAILED LOGIN
+      // -----------------------------
       if (!result.Success)
       {
         return Unauthorized(new
@@ -112,34 +174,85 @@ namespace Entry.Auth.Controllers
         });
       }
 
-      // ❗ 3. Sätt cookies (nu vet vi att AccessToken & RefreshToken INTE är null)
+      // -----------------------------
+      // 6. SET COOKIES
+      // -----------------------------
       CookieHelper.Set(Response, "accessToken", result.AccessToken!, TimeSpan.FromHours(1));
       CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, TimeSpan.FromDays(30));
 
-      // ❗ 4. Returnera user-info
+      // -----------------------------
+      // 7. RETURN USER AND MESSAGE
+      // -----------------------------
       return Ok(new
       {
         success = true,
-        user = result.User
+        user = result.User,
+        message = "Login successful."
       });
     }
 
     [AllowAnonymous]
     [HttpPost("2fa/verify-login")]
+    [EnableRateLimiting("AuthPolicy")]
     public async Task<IActionResult> VerifyTwoFactorLogin([FromBody] VerifyTwoFactorLoginDto dto)
     {
+      var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+      // -----------------------------
+      // 1. BRUTE-FORCE CHECKS
+      // -----------------------------
+
+      var userId = _twoFactorService.GetUserIdFromTwoFactorToken(dto.TwoFactorToken!);
+
+      if(userId == null)
+        return Unauthorized(new { message = "Invalid or expired 2FA token." });
+
+      if(await _bruteForceService.IsIpBlocked(ip))
+        return StatusCode(429, new { message = "Too many requests from this IP. Please try again later." });
+
+      if(await _bruteForceService.IsUserBlocked(userId))
+        return StatusCode(429, new { message = "Too many 2FA attempts from this user. Please try again later." });
+
+      // -----------------------------
+      // 2. RUN 2FA-VERIFICATION
+      // -----------------------------
       var result = await _authService.VerifyTwoFactorLoginAsync(dto);
+
+      // -----------------------------
+      // 3. LOG BRUTE FORCE ATTEMPTS
+      // -----------------------------
+
+      await _bruteForceService.LogAsync(
+        endpoint: "2fa/verify-login",
+        ip: ip,
+        email: null,
+        userId: userId,
+        success: result.Success
+      );
+
+      // -----------------------------
+      // 4. FAILED 2FA
+      // -----------------------------
 
       if (!result.Success)
         return Unauthorized(new { message = "Verification failed.", errors = result.Errors });
 
+      // -----------------------------
+      // 5. SET COOKIES
+      // -----------------------------
+
       CookieHelper.Set(Response, "accessToken", result.AccessToken!, TimeSpan.FromHours(1));
       CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, TimeSpan.FromDays(30));
+
+      // -----------------------------
+      // 6. RETURN USER AND MESSAGE
+      // -----------------------------
 
       return Ok(new
       {
         success = result.Success,
-        user = result.User
+        user = result.User,
+        message = "Login successful."
       });
     }
 

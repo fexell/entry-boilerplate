@@ -14,11 +14,13 @@ namespace Entry.Auth.Controllers
   {
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly IUserService _userService;
+    private readonly IEmailChangeService _emailChangeService;
 
-    public AccountController(IRefreshTokenService refreshTokenService, IUserService userService)
+    public AccountController(IRefreshTokenService refreshTokenService, IUserService userService, IEmailChangeService emailChangeService)
     {
       _refreshTokenService = refreshTokenService;
       _userService = userService;
+      _emailChangeService = emailChangeService;
     }
 
     [HttpGet("sessions")]
@@ -82,6 +84,40 @@ namespace Entry.Auth.Controllers
       await _refreshTokenService.RevokeAllSessionsExceptCurrentAsync(userId, currentRefreshToken);
 
       return NoContent();
+    }
+
+    [HttpPost("email/change-request")]
+    public async Task<IActionResult> RequestEmailChange([FromBody] RequestEmailChangeDto dto)
+    {
+      var userId = User.GetUserId();
+      var user = await _userService.GetByIdAsync(userId);
+      if(user == null) return NotFound();
+
+      var result = await _emailChangeService.RequestEmailChangeAsync(user, dto.NewEmail, dto.Password);
+
+      return result switch
+      {
+        EmailChangeResult.Success => Ok(new { message = "A confirmation email has been sent to your new email address." }),
+        EmailChangeResult.InvalidPassword => BadRequest(new { message = "Incorrect password." }),
+        EmailChangeResult.EmailInUse => BadRequest(new { message = "That email address is already in use." }),
+        EmailChangeResult.SameEmail => BadRequest(new { message = "You cannot change to the same email address." }),
+        _ => BadRequest(new { message = "Could not process request." }),
+      };
+    }
+
+    [AllowAnonymous]
+    [HttpPost("email/change-confirm")]
+    public async Task<IActionResult> ConfirmEmailChange([FromBody] ConfirmEmailChangeDto dto)
+    {
+      var user = await _userService.GetByIdAsync(dto.UserId);
+      if(user == null) return BadRequest(new { message = "Invalid or expired confirmation link." });
+
+      var success = await _emailChangeService.ConfirmEmailChangeAsync(user, dto.NewEmail, dto.Token);
+      if(!success) return BadRequest(new { message = "Invalid or expired confirmation link." });
+
+      await _refreshTokenService.RevokeAllUserTokensAsync(user.Id);
+
+      return Ok(new { message = "Email changed successfully. Please sign in with your new email address." });
     }
   }
 }

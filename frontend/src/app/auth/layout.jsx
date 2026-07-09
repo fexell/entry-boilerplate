@@ -20,7 +20,8 @@ const AuthLayout = ({ children }) => {
 
   return (
     <>
-      <div className="auth flex flex-col items-center justify-center min-h-screen max-h-screen bg-neutral-950">
+      <div
+        className="auth flex flex-col items-center justify-center min-h-screen max-h-screen bg-neutral-950">
         <div className="auth-container w-105">
           {children}
         </div>

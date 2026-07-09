@@ -5,6 +5,7 @@ import { Lock, ShieldCheck, CircleAlert, CircleCheck, Eye, EyeOff } from "lucide
 
 import TwoFactorSetupModal from "@/components/Auth/TwoFactorSetupModal"
 import DisableTwoFactorModal from "@/components/Auth/DisableTwoFactorModal"
+import RegenerateRecoveryCodesModal from "@/components/Auth/RegenerateRecoveryCodesModal"
 
 import api from "@/lib/api"
 import useAuthStore from "@/store/useAuthStore"
@@ -16,6 +17,7 @@ const SecuritySettingsPage = () => {
 
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false)
   const [isDisableModalOpen, setIsDisableModalOpen] = useState(false)
+  const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false)
 
   const [twoFactorMessage, setTwoFactorMessage] = useState("")
   const twoFactorMessageTimeoutRef = useRef(null)
@@ -64,6 +66,12 @@ const SecuritySettingsPage = () => {
 
     clearTimeout(twoFactorMessageTimeoutRef.current)
     setTwoFactorMessage(message || "Two-factor authentication disabled.")
+    twoFactorMessageTimeoutRef.current = setTimeout(() => setTwoFactorMessage(""), 5000)
+  }
+
+  const handleRecoveryCodesRegenerated = (message) => {
+    clearTimeout(twoFactorMessageTimeoutRef.current)
+    setTwoFactorMessage(message || "Recovery codes regenerated successfully.")
     twoFactorMessageTimeoutRef.current = setTimeout(() => setTwoFactorMessage(""), 5000)
   }
 
@@ -154,6 +162,16 @@ const SecuritySettingsPage = () => {
             {twoFactorEnabled ? "Disable" : "Enable"}
           </button>
         </div>
+
+        {twoFactorEnabled && (
+          <button
+            type="button"
+            onClick={() => setIsRegenerateModalOpen(true)}
+            className="mt-3 text-sm text-neutral-500 hover:text-(--primary-color) transition-colors"
+          >
+            Regenerate recovery codes
+          </button>
+        )}
       </section>
 
       {/* Change password */}
@@ -193,6 +211,7 @@ const SecuritySettingsPage = () => {
               <input
                 id="currentPassword"
                 type={visibleFields.currentPassword ? "text" : "password"}
+                placeholder="••••••••"
                 autoComplete="current-password"
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
                 value={passwordData.currentPassword}
@@ -227,6 +246,7 @@ const SecuritySettingsPage = () => {
               <input
                 id="newPassword"
                 type={visibleFields.newPassword ? "text" : "password"}
+                placeholder="••••••••"
                 autoComplete="new-password"
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
                 value={passwordData.newPassword}
@@ -261,6 +281,7 @@ const SecuritySettingsPage = () => {
               <input
                 id="confirmPassword"
                 type={visibleFields.confirmPassword ? "text" : "password"}
+                placeholder="••••••••"
                 autoComplete="new-password"
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
                 value={passwordData.confirmPassword}
@@ -310,6 +331,12 @@ const SecuritySettingsPage = () => {
         isOpen={isDisableModalOpen}
         onClose={() => setIsDisableModalOpen(false)}
         onDisabled={handle2faDisabled}
+      />
+
+      <RegenerateRecoveryCodesModal
+        isOpen={isRegenerateModalOpen}
+        onClose={() => setIsRegenerateModalOpen(false)}
+        onRegenerated={handleRecoveryCodesRegenerated}
       />
     </div>
   )

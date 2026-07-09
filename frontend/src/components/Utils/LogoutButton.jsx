@@ -24,7 +24,7 @@ const LogoutButtonComponent = ({ className = "" }) => {
     } finally {
       clearUser()
       setIsLoggingOut(false)
-      router.push("/auth/login")
+      router.push("/?from=logout&loggedOut=true")
     }
   }
 

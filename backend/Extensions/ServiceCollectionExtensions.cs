@@ -134,15 +134,46 @@ namespace Entry.Auth.Extensions
       services.AddScoped<IUserService, UserService>();
       services.AddScoped<IAuthService, AuthService>();
       services.AddScoped<IVerificationEmailService, VerificationEmailService>();
+      services.AddScoped<IEmailChangeService, EmailChangeService>();
       services.AddScoped<IPasswordResetService, PasswordResetService>();
 
       services.AddScoped<IJwtService, JwtService>();
       services.AddScoped<IRefreshTokenService, RefreshTokenService>();
       services.AddScoped<ITwoFactorService, TwoFactorService>();
+      services.AddScoped<IBruteForceService, BruteForceService>();
 
       services.AddHostedService<EmailVerificationRefreshService>();
 
       services.AddHttpClient();
+
+      return services;
+    }
+
+    public static IServiceCollection AddAppAntiforgery(
+      this IServiceCollection services,
+      IWebHostEnvironment env
+    )
+    {
+      services.AddAntiforgery(options =>
+      {
+        // Header som frontend måste skicka på varje muterande request
+        options.HeaderName = "X-CSRF-TOKEN";
+
+        // Cookien får INTE vara httpOnly - JS behöver kunna se att den finns
+        // (själva värdet i cookien används internt av Antiforgery, frontend
+        // skickar aldrig cookie-värdet självt, bara token:et från /csrf-token)
+        options.Cookie.Name = "XSRF-TOKEN";
+        options.Cookie.HttpOnly = false;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+
+        // Secure kräver HTTPS för att webbläsaren ska spara cookien alls -
+        // även på localhost. I dev (vanligtvis plain http) måste den vara
+        // SameAsRequest, annars sparas cookien aldrig och CSRF-valideringen
+        // saknar sin ena halva på varje request.
+        options.Cookie.SecurePolicy = env.IsDevelopment()
+          ? CookieSecurePolicy.SameAsRequest
+          : CookieSecurePolicy.Always;
+      });
 
       return services;
     }
