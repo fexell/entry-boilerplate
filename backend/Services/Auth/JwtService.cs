@@ -17,7 +17,7 @@ namespace Entry.Auth.Services
       _config = config;
     }
 
-    public JwtTokenResult GenerateToken(AppUser user)
+    public JwtTokenResult GenerateToken(AppUser user, Guid sessionId)
     {
       var key = new SymmetricSecurityKey(
         Encoding.UTF8.GetBytes(_config["Jwt:Key"]!)
@@ -29,7 +29,8 @@ namespace Entry.Auth.Services
       {
         new Claim(JwtRegisteredClaimNames.Sub, user.Id),
         new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-        new Claim("username", user.UserName ?? "")
+        new Claim("username", user.UserName ?? ""),
+        new Claim("sid", sessionId.ToString())
       };
 
       var expires = DateTime.UtcNow.AddHours(1);

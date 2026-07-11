@@ -23,5 +23,8 @@ namespace Entry.Auth.DTOs
 
     [MaxLength(256)]
     public string? Avatar { get; set; }
+
+    [MaxLength(160, ErrorMessage = "Bio must be at most 160 characters long")]
+    public string? Bio { get; set; }
   }
 }

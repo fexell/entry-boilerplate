@@ -7,6 +7,20 @@ const SAFE_METHODS = new Set(["GET", "HEAD"])
 let refreshPromise = null
 let csrfTokenPromise = null
 
+// Parses a Response body, returning both the parsed JSON (if valid)
+// and the raw text, so callers can fall back to raw text on non-JSON bodies.
+const parseBody = async (res) => {
+  const text = await res.text().catch(() => "")
+
+  if (!text) return { data: null, rawText: "" }
+
+  try {
+    return { data: JSON.parse(text), rawText: text }
+  } catch (err) {
+    return { data: null, rawText: text }
+  }
+}
+
 const refreshAccessToken = async () => {
   if (refreshPromise) return refreshPromise
 
@@ -24,16 +38,42 @@ const refreshAccessToken = async () => {
 // Fetches (and caches) the CSRF request-token issued by /auth/csrf-token.
 // The matching secret half is stored in the non-httpOnly XSRF-TOKEN cookie,
 // which the browser attaches automatically via credentials: "include".
+//
+// IMPORTANT: only successful lookups are cached. A failed fetch must NOT
+// poison csrfTokenPromise, otherwise every request after a single transient
+// failure silently goes out without the header until a 403 happens to
+// trigger invalidateCsrfToken() - which is exactly what was masking the
+// real error before.
 const getCsrfToken = async () => {
   if (csrfTokenPromise) return csrfTokenPromise
 
-  csrfTokenPromise = fetch(`${BASE_URL}/auth/csrf-token`, {
-    method: "GET",
-    credentials: "include",
-  })
-    .then((res) => (res.ok ? res.json() : null))
-    .then((data) => data?.csrfToken ?? null)
-    .catch(() => null)
+  csrfTokenPromise = (async () => {
+    let res
+    try {
+      res = await fetch(`${BASE_URL}/auth/csrf-token`, {
+        method: "GET",
+        credentials: "include",
+      })
+    } catch (err) {
+      csrfTokenPromise = null // don't cache network failures
+      throw new Error(`Could not reach /auth/csrf-token: ${err.message}`)
+    }
+
+    if (!res.ok) {
+      csrfTokenPromise = null // don't cache HTTP failures either
+      throw new Error(`/auth/csrf-token responded with ${res.status}`)
+    }
+
+    const data = await res.json().catch(() => null)
+    const token = data?.csrfToken ?? null
+
+    if (!token) {
+      csrfTokenPromise = null
+      throw new Error("/auth/csrf-token responded without a csrfToken field")
+    }
+
+    return token
+  })()
 
   return csrfTokenPromise
 }
@@ -64,13 +104,27 @@ const api = async (path, options = {}) => {
   const needsCsrf = !SAFE_METHODS.has(method)
 
   if (needsCsrf) {
-    const csrfToken = await getCsrfToken()
+    try {
+      const csrfToken = await getCsrfToken()
 
-    if (csrfToken) {
       fetchOptions.headers = {
         ...fetchOptions.headers,
         "X-CSRF-TOKEN": csrfToken,
       }
+    } catch (err) {
+      // Surface the REAL reason instead of letting the request go out
+      // header-less and produce a confusing "Invalid or missing CSRF
+      // token" 403 further down.
+      console.error("CSRF token fetch failed:", err)
+
+      const csrfErr = new Error(
+        "Could not fetch a CSRF token. Check your connection and try again."
+      )
+      csrfErr.cause = err
+
+      if (!silent) toast.error(csrfErr.message)
+
+      throw csrfErr
     }
   }
 
@@ -80,9 +134,9 @@ const api = async (path, options = {}) => {
   })
 
   if (res.status === 403 && needsCsrf && !skipCsrfRetry) {
-    const problem = await safeJson(res.clone())
+    const problem = await parseBody(res.clone())
 
-    if (problem?.code === "CSRF_TOKEN_INVALID") {
+    if (problem?.data?.code === "CSRF_TOKEN_INVALID") {
       invalidateCsrfToken()
       return api(path, { ...options, skipCsrfRetry: true })
     }
@@ -105,7 +159,7 @@ const api = async (path, options = {}) => {
   }
 
   if (!res.ok) {
-    const problem = await safeJson(res)
+    const { data: problem, rawText } = await parseBody(res)
 
     let backendErrors = []
 
@@ -124,7 +178,12 @@ const api = async (path, options = {}) => {
       backendErrors = [problem.message]
     }
 
-    // 4. Fallback
+    // 4. Non-JSON body, ex. text/plain från en exception-handler
+    else if (rawText) {
+      backendErrors = [rawText]
+    }
+
+    // 5. Fallback
     else {
       backendErrors = [`API error: ${res.status}`]
     }
@@ -140,7 +199,7 @@ const api = async (path, options = {}) => {
 
   if (res.status === 204) return null
 
-  const data = await safeJson(res)
+  const { data } = await parseBody(res)
 
   if (!silent && typeof data?.message === "string") {
     toast.success(data.message)

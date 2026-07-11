@@ -7,6 +7,8 @@ using Entry.Auth.DTOs;
 
 namespace Entry.Auth.Services
 {
+  public record CreatedRefreshToken(string Token, Guid SessionId);
+
   public class RefreshTokenService : IRefreshTokenService
   {
     private readonly AppDbContext _db;
@@ -26,11 +28,12 @@ namespace Entry.Auth.Services
     // existing session is reused so its Id/CreatedAt/UserAgent survive
     // across token rotations, and only LastUsedAt is bumped.
 
-    public async Task<string> CreateRefreshTokenAsync(
+    public async Task<CreatedRefreshToken> CreateRefreshTokenAsync(
       string userId,
       Guid? sessionId = null,
       string? userAgent = null,
-      string? ipAddress = null)
+      string? ipAddress = null
+    )
     {
       UserSession? session = sessionId is not null
         ? await _db.UserSessions.FirstOrDefaultAsync(s => s.Id == sessionId && s.UserId == userId)
@@ -68,7 +71,7 @@ namespace Entry.Auth.Services
       _db.RefreshTokens.Add(refresh);
       await _db.SaveChangesAsync();
 
-      return token;
+      return new CreatedRefreshToken(token, session.Id);
     }
 
     // ------------------------------------------------------
@@ -99,12 +102,12 @@ namespace Entry.Auth.Services
       var newRefresh = await CreateRefreshTokenAsync(user.Id, token.SessionId);
 
       // create new access token
-      var jwt = _jwtService.GenerateToken(user);
+      var jwt = _jwtService.GenerateToken(user, newRefresh.SessionId);
 
       return new TokenPair
       {
         AccessToken = jwt.Token,
-        RefreshToken = newRefresh,
+        RefreshToken = newRefresh.Token,
         ExpiresInSeconds = jwt.ExpiresInSeconds
       };
     }

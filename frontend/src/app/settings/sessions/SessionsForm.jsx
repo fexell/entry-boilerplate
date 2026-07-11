@@ -3,19 +3,44 @@
 import { useEffect, useState } from "react"
 import { Monitor, CircleAlert } from "lucide-react"
 
+import RevokeAllSessionsButton from "@/components/Settings/RevokeAllSessionsButton"
+import ConfirmPasswordModal from "@/components/Utils/ConfirmPasswordModal"
+
 import api from "@/lib/api"
+
+const formatRelativeTime = (isoString) => {
+  const date = new Date(isoString)
+  const now = new Date()
+  const diffMs = now - date
+  const diffSec = Math.floor(diffMs / 1000)
+  const diffMin = Math.floor(diffSec / 60)
+  const diffHour = Math.floor(diffMin / 60)
+  const diffDay = Math.floor(diffHour / 24)
+
+  if(diffSec < 60) return "Right now"
+  if(diffMin < 60) return `${diffMin} min ago`
+  if(diffHour < 24) return `${diffHour} hours ago`
+  if(diffDay === 1) return "Yesterday"
+  if(diffDay < 7) return `${diffDay} days ago`
+
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric"
+  })
+}
 
 const SessionsSettingsPage = () => {
   const [sessions, setSessions] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [revokingId, setRevokingId] = useState(null)
   const [error, setError] = useState(null)
+  const [sessionToRevoke, setSessionToRevoke] = useState(null) // session object | null
 
   useEffect(() => {
     const loadSessions = async () => {
       try {
         const data = await api("/account/sessions")
-        setSessions(data.sessions ?? [])
+        setSessions(data ?? [])
       } catch (err) {
         setError(err.message)
       } finally {
@@ -26,17 +51,14 @@ const SessionsSettingsPage = () => {
     loadSessions()
   }, [])
 
-  const handleRevoke = async (id) => {
-    setRevokingId(id)
+  const handleRevoke = async (password) => {
+    await api(`/account/sessions/${sessionToRevoke.id}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    })
 
-    try {
-      await api(`/account/sessions/${id}`, { method: "DELETE" })
-      setSessions((prev) => prev.filter((session) => session.id !== id))
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setRevokingId(null)
-    }
+    setSessions((prev) => prev.filter((session) => session.id !== sessionToRevoke.id))
   }
 
   return (
@@ -77,7 +99,7 @@ const SessionsSettingsPage = () => {
                   </p>
                   <p className="mt-0.5 text-xs text-neutral-500">
                     {session.location ?? "Unknown location"} · Last active{" "}
-                    {session.lastActiveAt}
+                    {formatRelativeTime(session.lastActiveAt)}
                   </p>
                 </div>
               </div>
@@ -85,17 +107,37 @@ const SessionsSettingsPage = () => {
               {!session.isCurrent && (
                 <button
                   type="button"
-                  onClick={() => handleRevoke(session.id)}
-                  disabled={revokingId === session.id}
-                  className="shrink-0 text-sm text-neutral-500 hover:text-red-300 transition-colors disabled:opacity-50"
+                  onClick={() => setSessionToRevoke(session)}
+                  className="shrink-0 text-sm text-neutral-500 hover:text-red-300 transition-colors"
                 >
-                  {revokingId === session.id ? "..." : "Revoke"}
+                  Revoke
                 </button>
               )}
             </li>
           ))}
         </ul>
       )}
+
+      <div className="mt-10 pt-6 border-t border-neutral-800">
+        <h2 className="text-sm font-medium text-neutral-300">Revoke all sessions</h2>
+        <p className="mt-1 text-sm text-neutral-500 max-w-md">
+          Log out of all sessions except this one. Useful if you suspect unauthorized access to your account.
+        </p>
+        <div className="mt-4">
+          <RevokeAllSessionsButton />
+        </div>
+      </div>
+
+      <ConfirmPasswordModal
+        open={!!sessionToRevoke}
+        onClose={() => setSessionToRevoke(null)}
+        onConfirm={handleRevoke}
+        title="Revoke session"
+        description={`This will log out "${sessionToRevoke?.device ?? "this device"}". Please enter your password to confirm.`}
+        confirmLabel="Revoke session"
+        confirmingLabel="Revoking..."
+        successMessage="The session has been logged out."
+      />
     </div>
   )
 }

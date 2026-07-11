@@ -10,6 +10,7 @@ namespace Entry.Auth.Models
     public string? FirstName { get; set; }
     public string? LastName { get; set; }
     public string? Avatar { get; set; }
+    public string? Bio { get; set; }
     public bool Premium { get; set; } = false;
 
     // Navigation property for refresh tokens

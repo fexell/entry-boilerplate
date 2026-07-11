@@ -31,14 +31,9 @@ const SecuritySettingsPage = () => {
   const [passwordErrors, setPasswordErrors] = useState([])
   const [passwordSaved, setPasswordSaved] = useState(false)
 
-  const [visibleFields, setVisibleFields] = useState({
-    currentPassword: false,
-    newPassword: false,
-    confirmPassword: false,
-  })
+  const [showPasswords, setShowPasswords] = useState(false)
 
-  const toggleVisibility = (field) =>
-    setVisibleFields((prev) => ({ ...prev, [field]: !prev[field] }))
+  const toggleVisibility = () => setShowPasswords((prev) => !prev)
 
   const successTimeoutRef = useRef(null)
 
@@ -210,7 +205,7 @@ const SecuritySettingsPage = () => {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
               <input
                 id="currentPassword"
-                type={visibleFields.currentPassword ? "text" : "password"}
+                type={showPasswords ? "text" : "password"}
                 placeholder="••••••••"
                 autoComplete="current-password"
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
@@ -221,11 +216,11 @@ const SecuritySettingsPage = () => {
               />
               <button
                 type="button"
-                onClick={() => toggleVisibility("currentPassword")}
+                onClick={toggleVisibility}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-300 transition-colors"
-                aria-label={visibleFields.currentPassword ? "Hide password" : "Show password"}
+                aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
               >
-                {visibleFields.currentPassword ? (
+                {showPasswords ? (
                   <EyeOff className="w-4 h-4" />
                 ) : (
                   <Eye className="w-4 h-4" />
@@ -245,7 +240,7 @@ const SecuritySettingsPage = () => {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
               <input
                 id="newPassword"
-                type={visibleFields.newPassword ? "text" : "password"}
+                type={showPasswords ? "text" : "password"}
                 placeholder="••••••••"
                 autoComplete="new-password"
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
@@ -256,11 +251,11 @@ const SecuritySettingsPage = () => {
               />
               <button
                 type="button"
-                onClick={() => toggleVisibility("newPassword")}
+                onClick={toggleVisibility}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-300 transition-colors"
-                aria-label={visibleFields.newPassword ? "Hide password" : "Show password"}
+                aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
               >
-                {visibleFields.newPassword ? (
+                {showPasswords ? (
                   <EyeOff className="w-4 h-4" />
                 ) : (
                   <Eye className="w-4 h-4" />
@@ -280,7 +275,7 @@ const SecuritySettingsPage = () => {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
               <input
                 id="confirmPassword"
-                type={visibleFields.confirmPassword ? "text" : "password"}
+                type={showPasswords ? "text" : "password"}
                 placeholder="••••••••"
                 autoComplete="new-password"
                 className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
@@ -291,11 +286,11 @@ const SecuritySettingsPage = () => {
               />
               <button
                 type="button"
-                onClick={() => toggleVisibility("confirmPassword")}
+                onClick={toggleVisibility}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-300 transition-colors"
-                aria-label={visibleFields.confirmPassword ? "Hide password" : "Show password"}
+                aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
               >
-                {visibleFields.confirmPassword ? (
+                {showPasswords ? (
                   <EyeOff className="w-4 h-4" />
                 ) : (
                   <Eye className="w-4 h-4" />

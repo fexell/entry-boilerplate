@@ -141,11 +141,21 @@ namespace Entry.Auth.Extensions
       services.AddScoped<IRefreshTokenService, RefreshTokenService>();
       services.AddScoped<ITwoFactorService, TwoFactorService>();
       services.AddScoped<IBruteForceService, BruteForceService>();
-      services.AddScoped<ILoginRiskService, LoginRiskService>();
+      services.AddScoped<ILoginNotificationService, LoginNotificationService>();
 
       services.AddHostedService<EmailVerificationRefreshService>();
+      services.AddHostedService<AuthDataRetentionService>();
+
+      services.AddMemoryCache();
 
       services.AddHttpClient();
+
+      // Typed client for LoginRiskService: short timeout so a slow/down
+      // geo-IP provider can never stall the login request for long.
+      services.AddHttpClient<ILoginRiskService, LoginRiskService>(client =>
+      {
+        client.Timeout = TimeSpan.FromSeconds(3);
+      });
 
       return services;
     }

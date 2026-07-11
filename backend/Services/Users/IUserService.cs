@@ -19,6 +19,7 @@ namespace Entry.Auth.Services
     Task<string> GenerateEmailVerificationTokenAsync(AppUser user);
     Task<bool> VerifyEmailAsync(AppUser user, string token);
 
+    Task<bool> CheckPasswordAsync(AppUser user, string password);
     Task<IdentityResult> ChangePasswordAsync(AppUser user, ChangePasswordDto dto);
 
     Task<UserMeDto> GetUserMeAsync(AppUser user);

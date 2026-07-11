@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace Entry.Auth.Controllers
 {
+  // ------------------------------------------------------
+  // 2FA CONTROLLER
+  // ------------------------------------------------------
   [ApiController]
   [Route("api/2fa")]
   [Authorize]
@@ -21,18 +24,24 @@ namespace Entry.Auth.Controllers
       _twoFactorService = twoFactorService;
     }
 
+    // ------------------------------------------------------
+    // ENDPOINTS
+    // ------------------------------------------------------
+
+    // SETUP THE 2FA
     [HttpPost("setup")]
     public async Task<IActionResult> GetSetup()
     {
       var user = await _userManager.GetUserAsync(User);
 
-      if(user is null) return Unauthorized();
+      if(user is null) return Unauthorized(new { message = "User not found." });
 
       var result = await _twoFactorService.GetSetupInfoAsync(user);
 
       return Ok(result);
     }
 
+    // ENABLE THE 2FA
     [HttpPost("enable")]
     public async Task<IActionResult> Enable([FromBody] VerifyTwoFactorSetupRequest request)
     {
@@ -42,13 +51,14 @@ namespace Entry.Auth.Controllers
 
       var success = await _twoFactorService.VerifyAndEnableAsync(user, request.Code);
 
-      if(!success) return BadRequest(new { error = "Invalid verification code" });
+      if(!success) return BadRequest(new { message = "Invalid verification code" });
 
       var recoveryCodes = await _twoFactorService.GenerateRecoveryCodesAsync(user);
 
       return Ok(new { recoveryCodes, success = true, message = "2FA enabled successfully." });
     }
 
+    // DISABLE THE 2FA
     [HttpPost("disable")]
     public async Task<IActionResult> Disable([FromBody] DisableTwoFactorRequest request)
     {
@@ -58,11 +68,12 @@ namespace Entry.Auth.Controllers
 
       var success = await _twoFactorService.DisableAsync(user, request.Code);
 
-      if(!success) return BadRequest(new { error = "Invalid verification code" });
+      if(!success) return BadRequest(new { message = "Invalid verification code" });
 
       return Ok(new { success = true, message = "2FA disabled successfully." });
     }
 
+    // REGENERATE RECOVERY CODES
     [HttpPost("recovery-codes/regenerate")]
     public async Task<IActionResult> RegenerateRecoveryCodes([FromBody] RegenerateRecoveryCodesRequest request)
     {
@@ -72,7 +83,7 @@ namespace Entry.Auth.Controllers
 
       var isValid = await _twoFactorService.VerifyCodeAsync(user, request.Code);
 
-      if(!isValid) return BadRequest(new { error = "Invalid verification code" });
+      if(!isValid) return BadRequest(new { message = "Invalid verification code" });
 
       var recoveryCodes = await _twoFactorService.GenerateRecoveryCodesAsync(user);
 

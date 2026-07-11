@@ -12,16 +12,19 @@ namespace Entry.Auth.Services
     private readonly UserManager<AppUser> _userManager;
     private readonly IVerificationEmailService _verificationEmailService;
     private readonly IRefreshTokenService _refreshTokenService;
+    private readonly AppDbContext _db;
 
     public UserService(
       UserManager<AppUser> userManager,
       IVerificationEmailService verificationEmailService,
-      IRefreshTokenService refreshTokenService
+      IRefreshTokenService refreshTokenService,
+      AppDbContext db
     )
     {
       _userManager = userManager;
       _verificationEmailService = verificationEmailService;
       _refreshTokenService = refreshTokenService;
+      _db = db;
     }
 
     // ------------------------------------------------------
@@ -80,6 +83,12 @@ namespace Entry.Auth.Services
         updated = true;
       }
 
+      if(dto.Bio != null && dto.Bio != user.Bio)
+      {
+        user.Bio = dto.Bio;
+        updated = true;
+      }
+
       if (!updated) return true;
 
       var result = await _userManager.UpdateAsync(user);
@@ -94,8 +103,18 @@ namespace Entry.Auth.Services
     public async Task<UserDeleteResult> DeleteUserAsync(AppUser user, string password)
     {
       var passwordValid = await _userManager.CheckPasswordAsync(user, password);
+      if(!passwordValid) return UserDeleteResult.InvalidPassword;
 
-      if (!passwordValid) return UserDeleteResult.InvalidPassword;
+      var refreshTokens = await _db.RefreshTokens
+        .Where(rt => rt.UserId == user.Id)
+        .ToListAsync();
+
+      var sessions = await _db.UserSessions
+        .Where(s => s.UserId == user.Id)
+        .ToListAsync();
+      _db.UserSessions.RemoveRange(sessions);
+
+      await _db.SaveChangesAsync();
 
       var result = await _userManager.DeleteAsync(user);
 
@@ -122,6 +141,11 @@ namespace Entry.Auth.Services
       return result.Succeeded;
     }
 
+    public async Task<bool> CheckPasswordAsync(AppUser user, string password)
+    {
+      return await _userManager.CheckPasswordAsync(user, password);
+    }
+
     // ------------------------------------------------------
     // PASSWORD CHANGE
     // ------------------------------------------------------
@@ -137,6 +161,8 @@ namespace Entry.Auth.Services
 
     public async Task<UserMeDto> GetUserMeAsync(AppUser user)
     {
+      Console.WriteLine(user.Bio);
+
       return new UserMeDto
       {
         Id = user.Id,
@@ -147,6 +173,7 @@ namespace Entry.Auth.Services
         Avatar = user.Avatar,
         FirstName = user.FirstName,
         LastName = user.LastName,
+        Bio = user.Bio,
         Premium = user.Premium,
         TwoFactorEnabled = user.TwoFactorEnabled
       };
@@ -161,6 +188,7 @@ namespace Entry.Auth.Services
         FirstName = user.FirstName,
         LastName = user.LastName,
         Avatar = user.Avatar,
+        Bio = user.Bio,
         CreatedAt = user.CreatedAt,
         Premium = user.Premium
       });

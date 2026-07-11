@@ -11,6 +11,9 @@ using System.Security.Claims;
 
 namespace Entry.Auth.Controllers
 {
+  // ------------------------------------------------------
+  // AUTH CONTROLLER
+  // ------------------------------------------------------
   [ApiController]
   [Route("api/[controller]")]
   public class AuthController : ControllerBase
@@ -23,6 +26,7 @@ namespace Entry.Auth.Controllers
     private readonly ITwoFactorService _twoFactorService;
     private readonly IAntiforgery _antiforgery;
     private readonly ILoginRiskService _loginRiskService;
+    private readonly ILoginNotificationService _loginNotificationService;
 
     public AuthController(
       IAuthService authService,
@@ -32,7 +36,8 @@ namespace Entry.Auth.Controllers
       IBruteForceService bruteForceService,
       ITwoFactorService twoFactorService,
       IAntiforgery antiforgery,
-      ILoginRiskService loginRiskService
+      ILoginRiskService loginRiskService,
+      ILoginNotificationService loginNotificationService
     )
     {
       _authService = authService;
@@ -43,6 +48,7 @@ namespace Entry.Auth.Controllers
       _twoFactorService = twoFactorService;
       _antiforgery = antiforgery;
       _loginRiskService = loginRiskService;
+      _loginNotificationService = loginNotificationService;
     }
 
     // ------------------------------------------------------
@@ -59,7 +65,7 @@ namespace Entry.Auth.Controllers
     }
 
     // ------------------------------------------------------
-    // REGISTER (NO LOGIN)
+    // REGISTER (NO REDIRECT TO LOGIN)
     // ------------------------------------------------------
 
     [AllowAnonymous]
@@ -145,40 +151,8 @@ namespace Entry.Auth.Controllers
       // -----------------------------
       var result = await _authService.LoginAsync(dto);
 
-      // -----------------------------
-      // 2.1. RISK ASSESSMENT
-      // -----------------------------
-
-      var deviceFingerprint = dto.DeviceFingerprint;
-      var risk = await _loginRiskService.EvaluateAsync(user, ip, deviceFingerprint);
-
-      // -----------------------------
-      // 2.2. HANDLE RISK
-      // -----------------------------
-
-      if(risk.RiskLevel == "High")
-      {
-        return Ok(new
-        {
-          requiresTwoFactor = true,
-          reason = "suspicious_login",
-          twoFactorToken = result.TwoFactorToken
-        });
-      }
-
-      if(risk.RiskLevel == "Medium" && !result.RequiresTwoFactor)
-      {
-        if (user.TwoFactorEnabled)
-        {
-          return Ok(new
-          {
-            requiresTwoFactor = true,
-            reason = "medium_risk",
-            twoFactorToken = result.TwoFactorToken
-          });
-        }
-      }
-
+      // Log every attempt right away, regardless of what happens next,
+      // so brute-force counters always see it.
       await _bruteForceService.LogAsync(
         endpoint: "login",
         ip: ip,
@@ -188,26 +162,43 @@ namespace Entry.Auth.Controllers
       );
 
       // -----------------------------
-      // 3. 2FA REQUIRED -> RETURN
+      // 3. FAILED LOGIN -> RETURN EARLY
       // -----------------------------
-      if (result.RequiresTwoFactor)
-      {
-        return Ok(new
-        {
-          requiresTwoFactor = true,
-          twoFactorToken = result.TwoFactorToken
-        });
-      }
-
-      // -----------------------------
-      // 5. FAILED LOGIN
-      // -----------------------------
+      // Bail out on bad credentials/locked account before doing anything
+      // risk- or 2FA-related. This also avoids burning an ipapi.co call
+      // on every failed attempt.
       if (!result.Success)
       {
         return Unauthorized(new
         {
           message = "Invalid credentials.",
           errors = result.Errors
+        });
+      }
+
+      // -----------------------------
+      // 4. RISK ASSESSMENT (only for valid credentials)
+      // -----------------------------
+
+      var deviceFingerprint = dto.DeviceFingerprint;
+      var risk = await _loginRiskService.EvaluateAsync(user, ip, deviceFingerprint);
+
+      var requiresTwoFactor = result.RequiresTwoFactor
+        || risk.RiskLevel == "High"
+        || (risk.RiskLevel == "Medium" && user!.TwoFactorEnabled);
+
+      // -----------------------------
+      // 5. 2FA REQUIRED -> RETURN
+      // -----------------------------
+      if (requiresTwoFactor)
+      {
+        return Ok(new
+        {
+          requiresTwoFactor = true,
+          reason = risk.RiskLevel == "High" ? "suspicious_login"
+            : risk.RiskLevel == "Medium" ? "medium_risk"
+            : (string?)null,
+          twoFactorToken = result.TwoFactorToken
         });
       }
 
@@ -226,6 +217,11 @@ namespace Entry.Auth.Controllers
       user.LastKnownDeviceFingerprint = deviceFingerprint;
 
       await _userService.UpdateAsync(user);
+
+      // -----------------------------
+      // 7.1. LOGIN NOTIFICATION
+      // -----------------------------
+      // await _loginNotificationService.SendLoginNotificationAsync(user, ip, risk.Country, deviceFingerprint, risk.RiskLevel);
 
       // -----------------------------
       // 8. RETURN USER AND MESSAGE

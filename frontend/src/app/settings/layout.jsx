@@ -40,12 +40,6 @@ const SettingsLayout = ({ children }) => {
     }
   }
 
-  useEffect(() => {
-    if(isInitialized && !isAuthenticated) {
-      router.replace(`/?from=${pathname}`)
-    }
-  }, [isInitialized, isAuthenticated, pathname, router])
-
   if(!isInitialized || !isAuthenticated) return null
 
   return (
@@ -54,7 +48,7 @@ const SettingsLayout = ({ children }) => {
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-2 font-mono text-xs tracking-widest text-neutral-500">
             <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
-            {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()}
+            {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()} — ACCOUNT SETTINGS
           </div>
 
           <Link

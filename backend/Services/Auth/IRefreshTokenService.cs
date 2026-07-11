@@ -7,12 +7,7 @@ namespace Entry.Auth.Services
 {
   public interface IRefreshTokenService
   {
-    Task<string> CreateRefreshTokenAsync(
-      string userId,
-      Guid? sessionId = null,
-      string? userAgent = null,
-      string? ipAddress = null
-    );
+    Task<CreatedRefreshToken> CreateRefreshTokenAsync(string userId, Guid? sessionId = null, string? userAgent = null, string? ipAddress = null);
 
     Task<TokenPair?> RefreshTokenAsync(string refreshToken);
     Task<bool> RevokeRefreshTokenAsync(string refreshToken);

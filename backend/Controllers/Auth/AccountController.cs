@@ -4,12 +4,16 @@ using Microsoft.AspNetCore.Mvc;
 using Entry.Auth.Services;
 using Entry.Auth.Extensions;
 using Entry.Auth.DTOs;
+using Entry.Auth.Models;
 
 namespace Entry.Auth.Controllers
 {
+  // ------------------------------------------------------
+  // ACCOUNT CONTROLLER
+  // ------------------------------------------------------
   [ApiController]
-  [Route("api/[controller]")]
   [Authorize]
+  [Route("api/[controller]")]
   public class AccountController : ControllerBase
   {
     private readonly IRefreshTokenService _refreshTokenService;
@@ -23,6 +27,58 @@ namespace Entry.Auth.Controllers
       _emailChangeService = emailChangeService;
     }
 
+    // ------------------------------------------------------
+    // HELPERS
+    // ------------------------------------------------------
+
+    // GET CURRENT USER'S ID
+    private async Task<AppUser?> GetCurrentUserAsync()
+    {
+      var userId = User.GetUserId();
+
+      if(userId == null) return null;
+
+      return await _userService.GetByIdAsync(userId);
+    }
+
+    // GET CURRENT USER OR RETURN 404
+    private async Task<(AppUser? user, IActionResult? error)> GetCurrentUserOrNotFoundAsync()
+    {
+      var user = await GetCurrentUserAsync();
+      if(user == null) return (null, NotFound(new { message = "User not found." }));
+
+      return (user, null);
+    }
+
+    // REQUIRE VALID PASSWORD
+    private async Task<(bool isValid, IActionResult? error)> RequireValidPasswordAsync(AppUser user, string password)
+    {
+      var valid = await _userService.CheckPasswordAsync(user, password);
+      if(!valid) return (false, BadRequest(new { message = "Incorrect password." }));
+
+      return (true, null);
+    }
+
+    // GET CURRENT REFRESH TOKEN
+    private string? GetCurrentRefreshToken()
+    {
+      return Request.Cookies["refreshToken"];
+    }
+
+    // REQUIRE REFRESH TOKEN
+    private (string? token, IActionResult? error) RequireRefreshToken()
+    {
+      var token = GetCurrentRefreshToken();
+      if(string.IsNullOrEmpty(token)) return (null, BadRequest(new { message = "Missing refresh token." }));
+
+      return (token, null);
+    }
+
+    // ------------------------------------------------------
+    // ENDPOINTS
+    // ------------------------------------------------------
+
+    // GET ALL ACTIVE SESSIONS ACROSS ALL DEVICES
     [HttpGet("sessions")]
     public async Task<IActionResult> GetSessions()
     {
@@ -34,66 +90,87 @@ namespace Entry.Auth.Controllers
       return Ok(sessions);
     }
 
+    // REVOKE A SPECIFIC SESSION
     [HttpDelete("sessions/{id}")]
-    public async Task <IActionResult> RevokeSession(Guid id)
+    public async Task <IActionResult> RevokeSession(Guid id, [FromBody] RevokeSessionDto dto)
     {
-      var userId = User.GetUserId();
-      var revoked = await _refreshTokenService.RevokeSessionAsync(userId, id);
+      var (user, error) = await GetCurrentUserOrNotFoundAsync();
+      if(error != null) return error;
 
-      if(!revoked) return NotFound();
+      var (valid, passwordError) = await RequireValidPasswordAsync(user!, dto.Password);
+      if(passwordError != null) return passwordError;
+
+      var revoked = await _refreshTokenService.RevokeSessionAsync(user!.Id, id);
+      if(!revoked) return NotFound(new { message = "Session not found." });
 
       return NoContent();
     }
 
+    // REVOKE ALL SESSIONS EXCEPT CURRENT (REQUIRES VALID PASSWORD AND CURRENT REFRESH TOKEN)
+    [HttpPost("sessions/revoke-all")]
+    public async Task<IActionResult> RevokeAllSessions([FromBody] RevokeAllSessionsDto dto)
+    {
+      var (user, error) = await GetCurrentUserOrNotFoundAsync();
+      if(error != null) return error;
+
+      var (valid, passwordError) = await RequireValidPasswordAsync(user!, dto.Password);
+      if(passwordError != null) return passwordError;
+
+      var (currentRefreshToken, refreshTokenError) = RequireRefreshToken();
+      if(refreshTokenError != null) return refreshTokenError;
+
+      await _refreshTokenService.RevokeAllSessionsExceptCurrentAsync(user!.Id, currentRefreshToken);
+
+      return NoContent();
+    }
+
+    // UPDATE PROFILE (FIRST NAME, LAST NAME, ETC.)
     [HttpPatch("profile")]
     public async Task<IActionResult> UpdateProfile([FromBody] UserUpdateDto dto)
     {
-      var userId = User.GetUserId();
-      var user = await _userService.GetByIdAsync(userId);
+      var (user, error) = await GetCurrentUserOrNotFoundAsync();
+      if(error != null) return error;
 
-      if(user == null) return NotFound();
+      var success = await _userService.UpdateUserAsync(user!, dto);
+      if(!success) return BadRequest(new { message = "Could not update profile." });
 
-      var success = await _userService.UpdateUserAsync(user, dto);
-
-      if(!success) return BadRequest("Could not update profile.");
-
-      var me = await _userService.GetUserMeAsync(user);
-
+      var me = await _userService.GetUserMeAsync(user!);
       return Ok(me);
     }
 
+    // CHANGE PASSWORD
     [HttpPatch("password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
     {
-      var userId = User.GetUserId();
-      var user = await _userService.GetByIdAsync(userId);
+      var (user, error) = await GetCurrentUserOrNotFoundAsync();
+      if(error != null) return error;
 
-      if(user == null) return NotFound();
-      
-      var result = await _userService.ChangePasswordAsync(user, dto);
-
+      var result = await _userService.ChangePasswordAsync(user!, dto);
       if (!result.Succeeded)
       {
         return BadRequest(new
         {
+          message = "Could not change password.",
           errors = result.Errors.Select(e => e.Description).ToList()
         });
       }
 
-      var currentRefreshToken = Request.Cookies["refreshToken"];
-      await _refreshTokenService.RevokeAllSessionsExceptCurrentAsync(userId, currentRefreshToken);
+      var (currentRefreshToken, refreshTokenError) = RequireRefreshToken();
+      if(refreshTokenError != null) return refreshTokenError;
+
+      await _refreshTokenService.RevokeAllSessionsExceptCurrentAsync(user!.Id, currentRefreshToken);
 
       return NoContent();
     }
 
+    // REQUEST EMAIL CHANGE
     [HttpPost("email/change-request")]
     public async Task<IActionResult> RequestEmailChange([FromBody] RequestEmailChangeDto dto)
     {
-      var userId = User.GetUserId();
-      var user = await _userService.GetByIdAsync(userId);
-      if(user == null) return NotFound();
+      var (user, error) = await GetCurrentUserOrNotFoundAsync();
+      if(error != null) return error;
 
-      var result = await _emailChangeService.RequestEmailChangeAsync(user, dto.NewEmail, dto.Password);
+      var result = await _emailChangeService.RequestEmailChangeAsync(user!, dto.NewEmail, dto.Password);
 
       return result switch
       {
@@ -105,6 +182,7 @@ namespace Entry.Auth.Controllers
       };
     }
 
+    // CONFIRM EMAIL CHANGE
     [AllowAnonymous]
     [HttpPost("email/change-confirm")]
     public async Task<IActionResult> ConfirmEmailChange([FromBody] ConfirmEmailChangeDto dto)

@@ -1,16 +1,19 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Entry.Auth.Models;
 
 namespace Entry.Auth.Services
 {
   public class EmailService : IEmailService
   {
     private readonly HttpClient _http;
+    private readonly IConfiguration _config;
     private readonly string _apiKey;
 
     public EmailService(IConfiguration config, HttpClient http)
     {
+      _config = config;
       _http = http;
       _apiKey = config["Resend:ApiKey"]
         ?? throw new Exception("Missing Resend API key");

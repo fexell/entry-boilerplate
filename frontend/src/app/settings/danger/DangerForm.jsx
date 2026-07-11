@@ -34,7 +34,7 @@ export default function DangerForm({ username }) {
         body: JSON.stringify({ password }),
       });
       clearUser();
-      router.push("/login");
+      router.push("/auth/user-deleted");
     } catch (err) {
       setError(err?.message || "Something went wrong.");
       setIsDeleting(false);

@@ -1,10 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { User, Mail, Lock, CircleCheck, CircleAlert } from "lucide-react"
+import { User, Mail, CircleCheck, CircleAlert } from "lucide-react"
 
 import api from "@/lib/api"
 import useAuthStore from "@/store/useAuthStore"
+import ConfirmPasswordModal from "@/components/Utils/ConfirmPasswordModal"
+
+const BIO_MAX_LENGTH = 160
 
 const ProfileForm = () => {
   const user = useAuthStore((state) => state.user)
@@ -19,6 +22,7 @@ const ProfileForm = () => {
       </div>
 
       <NameSection user={user} />
+      <BioSection user={user} />
       <EmailSection user={user} />
     </div>
   )
@@ -131,6 +135,111 @@ const NameSection = () => {
 }
 
 // ------------------------------------------------------
+// BIO
+// ------------------------------------------------------
+
+const BioSection = () => {
+  const user = useAuthStore((state) => state.user)
+  const setUser = useAuthStore((state) => state.setUser)
+
+  const [bio, setBio] = useState(user?.bio ?? "")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState(null)
+
+  const remaining = BIO_MAX_LENGTH - bio.length
+  const isSubmitDisabled = isSubmitting || bio === (user?.bio ?? "") || remaining < 0
+
+  const handleChange = (e) => {
+    setBio(e.target.value)
+    setSaved(false)
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaved(false)
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      const me = await api("/account/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bio }),
+      })
+      setUser(me)
+      setSaved(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-3">
+        Bio
+      </h2>
+
+      {error && (
+        <div className="flex items-start gap-3 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3.5 mb-5 max-w-md">
+          <CircleAlert className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-red-300">{error}</p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-2 max-w-md">
+        <div>
+          <label
+            htmlFor="bio"
+            className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
+          >
+            About you
+          </label>
+          <textarea
+            id="bio"
+            rows={3}
+            placeholder="Tell people a little about yourself"
+            maxLength={BIO_MAX_LENGTH}
+            className="w-full resize-none bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
+            value={bio}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              type="submit"
+              disabled={isSubmitDisabled}
+              className="flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg px-5 py-2.5 transition-colors"
+            >
+              {isSubmitting ? "Saving..." : "Save changes"}
+            </button>
+
+            {saved && (
+              <span className="flex items-center gap-1.5 text-sm text-neutral-500">
+                <CircleCheck className="w-4 h-4 text-(--primary-color)" />
+                Saved
+              </span>
+            )}
+          </div>
+
+          <span
+            className={`text-xs font-mono ${
+              remaining < 0 ? "text-red-400" : "text-neutral-600"
+            }`}
+          >
+            {remaining}
+          </span>
+        </div>
+      </form>
+    </section>
+  )
+}
+
+// ------------------------------------------------------
 // EMAIL
 // ------------------------------------------------------
 
@@ -138,34 +247,22 @@ const EmailSection = () => {
   const user = useAuthStore((state) => state.user)
 
   const [newEmail, setNewEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState(null)
+  const [modalOpen, setModalOpen] = useState(false)
 
-  const isSubmitDisabled =
-    isSubmitting || !newEmail || !password || newEmail === user?.email
+  const isSubmitDisabled = !newEmail || newEmail === user?.email
 
-  const handleSubmit = async (e) => {
+  const handleOpenModal = (e) => {
     e.preventDefault()
-    setSuccess(false)
-    setError(null)
-    setIsSubmitting(true)
+    setModalOpen(true)
+  }
 
-    try {
-      await api("/account/email/change-request", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ newEmail, password }),
-      })
-      setSuccess(true)
-      setNewEmail("")
-      setPassword("")
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setIsSubmitting(false)
-    }
+  const handleConfirm = async (password) => {
+    await api("/account/email/change-request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ newEmail, password }),
+    })
+    setNewEmail("")
   }
 
   return (
@@ -178,23 +275,7 @@ const EmailSection = () => {
         Current: <span className="text-neutral-200">{user?.email}</span>
       </p>
 
-      {success && (
-        <div className="flex items-start gap-3 bg-(--primary-color-10) border border-(--primary-color-20) rounded-lg px-4 py-3.5 mb-5 max-w-md">
-          <CircleCheck className="w-4 h-4 text-(--primary-color) mt-0.5 shrink-0" />
-          <p className="text-sm text-amber-300">
-            Check the new address&apos;s inbox for a confirmation link. Your current email stays active until you confirm.
-          </p>
-        </div>
-      )}
-
-      {error && (
-        <div className="flex items-start gap-3 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3.5 mb-5 max-w-md">
-          <CircleAlert className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-          <p className="text-sm text-red-300">{error}</p>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-5 max-w-md">
+      <form onSubmit={handleOpenModal} className="space-y-5 max-w-md">
         <div>
           <label
             htmlFor="newEmail"
@@ -216,35 +297,25 @@ const EmailSection = () => {
           </div>
         </div>
 
-        <div>
-          <label
-            htmlFor="emailChangePassword"
-            className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-          >
-            Password
-          </label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-            <input
-              id="emailChangePassword"
-              type="password"
-              placeholder="••••••••"
-              autoComplete="current-password"
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-        </div>
-
         <button
           type="submit"
           disabled={isSubmitDisabled}
           className="flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg px-5 py-2.5 transition-colors"
         >
-          {isSubmitting ? "Sending..." : "Change email address"}
+          Change email address
         </button>
       </form>
+
+      <ConfirmPasswordModal
+        open={modalOpen}
+        title="Confirm email change"
+        description={`Enter your password to confirm changing your email to ${newEmail}.`}
+        confirmLabel="Change email"
+        confirmingLabel="Changing..."
+        successMessage="Check the new address's inbox for a confirmation link. Your current email stays active until you confirm."
+        onConfirm={handleConfirm}
+        onClose={() => setModalOpen(false)}
+      />
     </section>
   )
 }

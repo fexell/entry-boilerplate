@@ -49,21 +49,21 @@ const VerifyEmailForm = () => {
 
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-neutral-100">
-            {status === "verifying" && "Verifierar din e-post"}
-            {status === "success" && "E-post verifierad"}
-            {status === "error" && "Verifiering misslyckades"}
+            {status === "verifying" && "Verify your email address"}
+            {status === "success" && "Email verified"}
+            {status === "error" && "Verification failed"}
           </h1>
           <p className="mt-1.5 text-sm text-neutral-500">
-            {status === "verifying" && "Vänta medan vi bekräftar din länk."}
-            {status === "success" && "Ditt konto är nu aktiverat."}
-            {status === "error" && "Vi kunde inte verifiera din e-post."}
+            {status === "verifying" && "Wait till we verify your email address."}
+            {status === "success" && "Your account has been verified."}
+            {status === "error" && "We could not verify your email address."}
           </p>
         </div>
 
         {status === "verifying" && (
           <div className="flex items-center gap-3 bg-neutral-900 border border-neutral-800 rounded-lg px-4 py-3.5">
             <Loader2 className="w-4 h-4 text-amber-400 animate-spin shrink-0" />
-            <p className="text-sm text-neutral-400">Bearbetar verifiering...</p>
+            <p className="text-sm text-neutral-400">Processing verification...</p>
           </div>
         )}
 
@@ -72,9 +72,9 @@ const VerifyEmailForm = () => {
             <div className="flex items-start gap-3 bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-4 py-3.5">
               <CircleCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
               <div>
-                <p className="text-sm text-emerald-300 font-medium">Klart!</p>
+                <p className="text-sm text-emerald-300 font-medium">Done!</p>
                 <p className="text-sm text-neutral-400 mt-0.5">
-                  Du kan nu logga in med ditt konto.
+                  You can now log in to your account.
                 </p>
               </div>
             </div>
@@ -83,7 +83,7 @@ const VerifyEmailForm = () => {
               href="/auth/login"
               className="mt-6 w-full flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) text-neutral-950 font-medium text-sm rounded-lg py-2.5 transition-colors"
             >
-              Gå till inloggning
+              Go to log in
             </Link>
           </>
         )}
@@ -100,12 +100,12 @@ const VerifyEmailForm = () => {
             </div>
 
             <p className="mt-6 text-center text-sm text-neutral-500">
-              Behöver du ett nytt verifieringsmejl?{" "}
+              Do you need a new verification email?{" "}
               <Link
                 href="/auth/resend-verification"
                 className="text-neutral-200 hover:text-(--primary-color) transition-colors underline underline-offset-4 decoration-neutral-700"
               >
-                Skicka igen
+                Send a new one
               </Link>
             </p>
           </>

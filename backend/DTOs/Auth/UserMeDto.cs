@@ -15,6 +15,9 @@ namespace Entry.Auth.DTOs
     [RegularExpression("^[a-zA-Z0-9_]+$")]
     public string? Username { get; set; }
 
+    [MaxLength(160, ErrorMessage = "Bio must be less than 160 characters long.")]
+    public string? Bio { get; set; }
+
     [Required]
     public DateTime CreatedAt { get; set; }
 

@@ -263,15 +263,15 @@ namespace Entry.Auth.Services
 
     private async Task<AuthResultDto> GenerateAuthResultAsync(AppUser user)
     {
-      var jwt = _jwtService.GenerateToken(user);
-      var refreshToken = await _refreshTokenService.CreateRefreshTokenAsync(user.Id);
+      var created = await _refreshTokenService.CreateRefreshTokenAsync(user.Id);
+      var jwt = _jwtService.GenerateToken(user, created.SessionId);
       var userMe = await _userService.GetUserMeAsync(user);
 
       return new AuthResultDto
       {
         Success = true,
         AccessToken = jwt.Token,
-        RefreshToken = refreshToken,
+        RefreshToken = created.Token,
         ExpiresIn = jwt.ExpiresInSeconds,
         User = userMe
       };

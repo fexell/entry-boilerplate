@@ -75,13 +75,21 @@ namespace Entry.Auth.Data
       {
         entity.ToTable("AuthAttempts");
 
-        entity.HasIndex(x => x.IpAddress);
-        entity.HasIndex(x => x.Email);
+        entity.HasIndex(x => new { x.IpAddress, x.Timestamp });
+        entity.HasIndex(x => new { x.Email, x.Timestamp });
+        entity.HasIndex(x => new { x.UserId, x.Timestamp });
+
         entity.HasIndex(x => x.Endpoint);
+
         entity.HasIndex(x => x.Timestamp);
 
         entity.Property(x => x.IpAddress).IsRequired();
         entity.Property(x => x.Endpoint).IsRequired();
+
+        entity.HasOne(x => x.User)
+          .WithMany()
+          .HasForeignKey(x => x.UserId)
+          .OnDelete(DeleteBehavior.SetNull);
       });
 
       builder.Entity<LoginRiskAssessment>(entity =>
