@@ -34,7 +34,7 @@ namespace Entry.Auth.Services
       {
         Endpoint = endpoint,
         IpAddress = ip,
-        Email = email,
+        Email = email?.Trim().ToUpperInvariant(),
         UserId = userId,
         Success = success,
         Timestamp = DateTime.UtcNow
@@ -44,37 +44,36 @@ namespace Entry.Auth.Services
       await _db.SaveChangesAsync();
     }
 
-    public async Task<bool> IsIpBlocked(string ip)
+    public async Task<bool> IsIpBlockedAsync(string ip)
     {
-      var cutoff = DateTime.UtcNow - IpWindow;
-
-      var count = await _db.AuthAttempts
-        .Where(x => x.IpAddress == ip && x.Timestamp >= cutoff)
-        .CountAsync();
-
-      return count >= IpLimit;
+      return await IsBlockedAsync(x => x.IpAddress == ip, IpWindow, IpLimit);
     }
 
-    public async Task<bool> IsEmailBlocked(string email)
+    public async Task<bool> IsEmailBlockedAsync(string email)
     {
-      var cutoff = DateTime.UtcNow - EmailWindow;
-
-      var count = await _db.AuthAttempts
-        .Where(x => x.Email == email && x.Timestamp >= cutoff)
-        .CountAsync();
-
-      return count >= EmailLimit;
+      var normalizedEmail = email.Trim().ToUpperInvariant();
+      return await IsBlockedAsync(x => x.Email == normalizedEmail, EmailWindow, EmailLimit);
     }
 
-    public async Task<bool> IsUserBlocked(string userId)
+    public async Task<bool> IsUserBlockedAsync(string userId)
     {
-      var cutoff = DateTime.UtcNow - UserWindow;
+      return await IsBlockedAsync(x => x.UserId == userId, UserWindow, UserLimit);
+    }
+
+    private async Task<bool> IsBlockedAsync(
+      System.Linq.Expressions.Expression<Func<AuthAttempt, bool>> predicate,
+      TimeSpan window,
+      int limit
+    )
+    {
+      var cutoff = DateTime.UtcNow - window;
 
       var count = await _db.AuthAttempts
-        .Where(x => x.UserId == userId && x.Timestamp >= cutoff)
+        .Where(predicate)
+        .Where(x => !x.Success && x.Timestamp >= cutoff)
         .CountAsync();
 
-      return count >= UserLimit;
+      return count >= limit;
     }
   }
 }

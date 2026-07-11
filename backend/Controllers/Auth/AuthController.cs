@@ -24,6 +24,7 @@ namespace Entry.Auth.Controllers
     private readonly IPasswordResetService _passwordResetService;
     private readonly IBruteForceService _bruteForceService;
     private readonly ITwoFactorService _twoFactorService;
+    private readonly IJwtService _jwtService;
     private readonly IAntiforgery _antiforgery;
     private readonly ILoginRiskService _loginRiskService;
     private readonly ILoginNotificationService _loginNotificationService;
@@ -35,6 +36,7 @@ namespace Entry.Auth.Controllers
       IPasswordResetService passwordResetService,
       IBruteForceService bruteForceService,
       ITwoFactorService twoFactorService,
+      IJwtService jwtService,
       IAntiforgery antiforgery,
       ILoginRiskService loginRiskService,
       ILoginNotificationService loginNotificationService
@@ -46,6 +48,7 @@ namespace Entry.Auth.Controllers
       _passwordResetService = passwordResetService;
       _bruteForceService = bruteForceService;
       _twoFactorService = twoFactorService;
+      _jwtService = jwtService;
       _antiforgery = antiforgery;
       _loginRiskService = loginRiskService;
       _loginNotificationService = loginNotificationService;
@@ -109,7 +112,7 @@ namespace Entry.Auth.Controllers
     {
       var user = await _userService.GetByEmailAsync(dto.Email!);
 
-      if(user is not null)
+      if (user is not null)
         await _verificationEmailService.TryResendVerificationEmailAsync(user);
 
       return Ok(new { message = "If an account with that email exists and isn't verified yet, a new verification email has been sent." });
@@ -130,18 +133,18 @@ namespace Entry.Auth.Controllers
       // 1. BRUTE-FORCE CHECKS
       // -----------------------------
 
-      if(await _bruteForceService.IsIpBlocked(ip))
+      if (await _bruteForceService.IsIpBlockedAsync(ip))
       {
         return StatusCode(429, new { message = "Too many requests from this IP. Please try again later." });
       }
 
-      if(!string.IsNullOrWhiteSpace(dto.Email) && await _bruteForceService.IsEmailBlocked(dto.Email))
+      if (!string.IsNullOrWhiteSpace(dto.Email) && await _bruteForceService.IsEmailBlockedAsync(dto.Email))
       {
         return StatusCode(429, new { message = "Too many requests from this email. Please try again later." });
       }
 
       var user = await _userService.GetByEmailAsync(dto.Email!);
-      if(user != null && await _bruteForceService.IsUserBlocked(user.Id))
+      if (user != null && await _bruteForceService.IsUserBlockedAsync(user.Id))
       {
         return StatusCode(429, new { message = "Too many requests from this user. Please try again later." });
       }
@@ -165,7 +168,7 @@ namespace Entry.Auth.Controllers
       // 3. FAILED LOGIN -> RETURN EARLY
       // -----------------------------
       // Bail out on bad credentials/locked account before doing anything
-      // risk- or 2FA-related. This also avoids burning an ipapi.co call
+      // risk- or 2FA-related. This also avoids burning an ipinfo.io call
       // on every failed attempt.
       if (!result.Success)
       {
@@ -212,7 +215,7 @@ namespace Entry.Auth.Controllers
       // 7. UPDATE USER
       // -----------------------------
 
-      user.LastKnownIp = ip;
+      user!.LastKnownIp = ip;
       user.LastKnownCountry = risk.Country;
       user.LastKnownDeviceFingerprint = deviceFingerprint;
 
@@ -245,15 +248,15 @@ namespace Entry.Auth.Controllers
       // 1. BRUTE-FORCE CHECKS
       // -----------------------------
 
-      var userId = _twoFactorService.GetUserIdFromTwoFactorToken(dto.TwoFactorToken!);
+      var userId = _jwtService.ValidateTwoFactorToken(dto.TwoFactorToken!);
 
-      if(userId == null)
+      if (userId == null)
         return Unauthorized(new { message = "Invalid or expired 2FA token." });
 
-      if(await _bruteForceService.IsIpBlocked(ip))
+      if (await _bruteForceService.IsIpBlockedAsync(ip))
         return StatusCode(429, new { message = "Too many requests from this IP. Please try again later." });
 
-      if(await _bruteForceService.IsUserBlocked(userId))
+      if (await _bruteForceService.IsUserBlockedAsync(userId))
         return StatusCode(429, new { message = "Too many 2FA attempts from this user. Please try again later." });
 
       // -----------------------------
@@ -302,14 +305,14 @@ namespace Entry.Auth.Controllers
     // ------------------------------------------------------
     // REFRESH TOKEN
     // ------------------------------------------------------
- 
+
     [AllowAnonymous]
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh()
     {
       var refreshToken = Request.Cookies["refreshToken"];
 
-      if(string.IsNullOrEmpty(refreshToken))
+      if (string.IsNullOrEmpty(refreshToken))
         return Unauthorized(new { message = "No refresh token provided.", errors = new[] { "Missing refresh token." } });
 
       var result = await _authService.RefreshAsync(refreshToken);
@@ -333,7 +336,7 @@ namespace Entry.Auth.Controllers
     {
       var user = await _userService.GetByEmailAsync(dto.Email!);
 
-      if(user is not null && user.EmailConfirmed) await _passwordResetService.SendPasswordResetEmailAsync(user);
+      if (user is not null && user.EmailConfirmed) await _passwordResetService.SendPasswordResetEmailAsync(user);
 
       return Ok(new { message = "If an account with that email exists and is verified, a password reset email has been sent." });
     }
@@ -348,11 +351,16 @@ namespace Entry.Auth.Controllers
     {
       var user = await _userService.GetByIdAsync(dto.UserId!);
 
-      if(user == null) return BadRequest(new { message = "Invalid or expired reset link." });
+      if (user == null) return BadRequest(new { message = "Invalid or expired reset link." });
 
-      var success = await _passwordResetService.ResetPasswordAsync(user, dto.Token!, dto.NewPassword!);
+      var result = await _passwordResetService.ResetPasswordAsync(user, dto.Token!, dto.NewPassword!);
 
-      if(!success) return BadRequest(new { message = "Invalid or expired reset link." });
+      if (!result.Succeeded)
+        return BadRequest(new
+        {
+          message = "Invalid or expired reset link.",
+          errors = result.Errors.Select(e => e.Description)
+        });
 
       await _authService.RevokeAllUserTokensAsync(user.Id);
 

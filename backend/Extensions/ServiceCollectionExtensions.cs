@@ -143,6 +143,8 @@ namespace Entry.Auth.Extensions
       services.AddScoped<IBruteForceService, BruteForceService>();
       services.AddScoped<ILoginNotificationService, LoginNotificationService>();
 
+      services.AddScoped<IFrontendUrlProvider, FrontendUrlProvider>();
+
       services.AddHostedService<EmailVerificationRefreshService>();
       services.AddHostedService<AuthDataRetentionService>();
 

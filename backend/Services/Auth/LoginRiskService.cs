@@ -1,3 +1,5 @@
+using System.Net;
+using System.Web;
 using Microsoft.Extensions.Caching.Memory;
 
 using Entry.Auth.Data;
@@ -14,12 +16,17 @@ namespace Entry.Auth.Services
     private readonly IMemoryCache _cache;
     private readonly IConfiguration _config;
 
-    // Successful geo lookups rarely change for a given IP within a short
-    // window, so we cache them for a while. Failed/unknown lookups get a
-    // much shorter TTL so we retry sooner without hammering the API on
-    // every single login while it's down or rate-limited.
     private static readonly TimeSpan HitTtl = TimeSpan.FromHours(12);
     private static readonly TimeSpan MissTtl = TimeSpan.FromMinutes(5);
+
+    // Risk scoring weights — consider moving to appsettings if you want
+    // these tunable without a redeploy.
+    private const int NewIpScore = 30;
+    private const int NewCountryScore = 40;
+    private const int NewDeviceScore = 30;
+    private const int UnusualTimeScore = 10;
+    private const int HighRiskThreshold = 70;
+    private const int MediumRiskThreshold = 30;
 
     public LoginRiskService(
       IUserService userService,
@@ -44,60 +51,42 @@ namespace Entry.Auth.Services
       string? deviceFingerprint
     )
     {
-      var country = await GetCountryFromIpAsync(ip);
+      // NOTE: countryCode is an ISO code (e.g. "SE"), not a display name.
+      // Display names are only resolved when rendering the email.
+      var countryCode = await GetCountryCodeFromIpAsync(ip);
 
       int score = 0;
 
-      // -----------------------------------------
-      // 1. NEW IP RANGE?
-      // -----------------------------------------
-
-      if(user != null && user.LastKnownIp != null && user.LastKnownIp != ip)
+      if (user != null && user.LastKnownIp != null && user.LastKnownIp != ip)
       {
-        score += 30;
+        score += NewIpScore;
       }
 
-      // -----------------------------------------
-      // 2. NEW COUNTRY?
-      // -----------------------------------------
-
-      if(user != null && user.LastKnownCountry != null && country != null && user.LastKnownCountry != country)
+      if (user != null && user.LastKnownCountry != null && countryCode != null && user.LastKnownCountry != countryCode)
       {
-        score += 40;
+        score += NewCountryScore;
       }
 
-      // -----------------------------------------
-      // 3. NEW DEVICE FINGERPRINT?
-      // -----------------------------------------
-
-      if(user != null && user.LastKnownDeviceFingerprint != null && user.LastKnownDeviceFingerprint != deviceFingerprint)
+      if (user != null && user.LastKnownDeviceFingerprint != null && user.LastKnownDeviceFingerprint != deviceFingerprint)
       {
-        score += 30;
+        score += NewDeviceScore;
       }
-
-      // -----------------------------------------
-      // 4. UNUSUAL TIME?
-      // -----------------------------------------
 
       var hour = DateTime.UtcNow.Hour;
-      if(hour < 5 || hour > 23)
+      if (hour < 5 || hour > 23)
       {
-        score += 10;
+        score += UnusualTimeScore;
       }
 
-      // -----------------------------------------
-      // 5. RISK LEVEL
-      // -----------------------------------------
-
-      string level = score >= 70 ? "High" :
-        score >= 30 ? "Medium" :
+      string level = score >= HighRiskThreshold ? "High" :
+        score >= MediumRiskThreshold ? "Medium" :
         "Low";
 
       var assessment = new LoginRiskAssessment
       {
         UserId = user?.Id,
         IpAddress = ip,
-        Country = country,
+        Country = countryCode,
         DeviceFingerprint = deviceFingerprint,
         RiskScore = score,
         RiskLevel = level,
@@ -107,7 +96,7 @@ namespace Entry.Auth.Services
       _db.LoginRiskAssessments.Add(assessment);
       await _db.SaveChangesAsync();
 
-      if(level == "High" && user != null)
+      if (level == "High" && user != null)
       {
         await SendSuspiciousLoginEmailAsync(user, assessment);
       }
@@ -119,19 +108,23 @@ namespace Entry.Auth.Services
     {
       var subject = "Security Alert: Suspicious Login Detected";
 
+      var countryDisplay = HttpUtility.HtmlEncode(
+        CountryCodeToName(assessment.Country) ?? assessment.Country ?? "Unknown"
+      );
+      var ipDisplay = HttpUtility.HtmlEncode(assessment.IpAddress);
+      var fingerprintDisplay = HttpUtility.HtmlEncode(assessment.DeviceFingerprint ?? "Unknown");
+      var riskLevelDisplay = HttpUtility.HtmlEncode(assessment.RiskLevel);
+
       var body = $"""
-      <p>Hi, {user.Email},</p>
-      <br /><br />
-      We have detected a suspicious login attempt on your account.</p>
-      <br /><br />
-      Details:
+      <p>Hi,</p>
+      <p>We have detected a suspicious login attempt on your account.</p>
+      <p>Details:</p>
       <ul>
-        <li>IP: {assessment.IpAddress}</li>
-        <li>Country: {assessment.Country ?? "Unknown"}</li>
-        <li>Device Fingerprint: {assessment.DeviceFingerprint ?? "Unknown"}</li>
-        <li>Risk Level: {assessment.RiskLevel}</li>
+        <li>IP: {ipDisplay}</li>
+        <li>Country: {countryDisplay}</li>
+        <li>Device Fingerprint: {fingerprintDisplay}</li>
+        <li>Risk Level: {riskLevelDisplay}</li>
       </ul>
-      <br /><br />
       <p>If this was not you, please revoke all active sessions immediately:
       {_config["AppUrls:FrontendBaseUrl"]}/settings/sessions
       </p>
@@ -140,48 +133,65 @@ namespace Entry.Auth.Services
       await _emailService.SendAsync(user.Email!, subject, body);
     }
 
-    public async Task<string?> GetCountryFromIpAsync(string ip)
+    public async Task<string?> GetCountryCodeFromIpAsync(string ip)
     {
-      if(string.IsNullOrWhiteSpace(ip) ||
-      ip == "127.0.0.1" ||
-      ip == "::1" ||
-      ip.StartsWith("192.168.") ||
-      ip.StartsWith("10.") ||
-      ip.StartsWith("172.16.") ||
-      ip.StartsWith("172.17.") ||
-      ip.StartsWith("172.18.") ||
-      ip.StartsWith("172.19.") ||
-      ip.StartsWith("172.20.") ||
-      ip.StartsWith("172.21.") ||
-      ip.StartsWith("172.22.") ||
-      ip.StartsWith("172.23.") ||
-      ip.StartsWith("172.24.") ||
-      ip.StartsWith("172.25.") ||
-      ip.StartsWith("172.26.") ||
-      ip.StartsWith("172.27.") ||
-      ip.StartsWith("172.28.") ||
-      ip.StartsWith("172.29.") ||
-      ip.StartsWith("172.30.") ||
-      ip.StartsWith("172.31."))
+      if (IsPrivateOrLoopback(ip))
       {
         return null;
       }
 
       var cacheKey = $"geoip:{ip}";
 
-      if(_cache.TryGetValue<string?>(cacheKey, out var cached))
+      if (_cache.TryGetValue<string?>(cacheKey, out var cached))
       {
         return cached;
       }
 
-      var result = await FetchCountryFromIpAsync(ip);
+      var result = await FetchCountryCodeFromIpAsync(ip);
 
       _cache.Set(cacheKey, result, result != null ? HitTtl : MissTtl);
 
       return result;
     }
 
-    private async Task<string?> FetchCountryFromIpAsync(string ip)
+    private static bool IsPrivateOrLoopback(string ip)
+    {
+      if (string.IsNullOrWhiteSpace(ip))
+      {
+        return true;
+      }
+
+      if (!IPAddress.TryParse(ip, out var address))
+      {
+        return true;
+      }
+
+      if (IPAddress.IsLoopback(address))
+      {
+        return true;
+      }
+
+      if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+      {
+        var bytes = address.GetAddressBytes();
+
+        return bytes[0] == 10
+          || (bytes[0] == 172 && bytes[1] >= 16 && bytes[1] <= 31)
+          || (bytes[0] == 192 && bytes[1] == 168);
+      }
+
+      if (address.AddressFamily == System.Net.Sockets.AddressFamily.InterNetworkV6)
+      {
+        var bytes = address.GetAddressBytes();
+
+        // fc00::/7 (unique local) and fe80::/10 (link-local)
+        return (bytes[0] & 0xFE) == 0xFC || (bytes[0] == 0xFE && (bytes[1] & 0xC0) == 0x80);
+      }
+
+      return false;
+    }
+
+    private async Task<string?> FetchCountryCodeFromIpAsync(string ip)
     {
       try
       {
@@ -192,9 +202,10 @@ namespace Entry.Auth.Services
           return null;
         }
 
-        var url = $"https://ipinfo.io/{ip}/country?token={token}";
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"https://ipinfo.io/{ip}/country");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
-        var response = await _httpClient.GetAsync(url);
+        var response = await _httpClient.SendAsync(request);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -203,15 +214,7 @@ namespace Entry.Auth.Services
 
         var content = (await response.Content.ReadAsStringAsync()).Trim();
 
-        if (string.IsNullOrWhiteSpace(content))
-        {
-          return null;
-        }
-
-        var countryCode = content.ToUpperInvariant();
-        var countryName = CountryCodeToName(countryCode);
-
-        return countryName;
+        return string.IsNullOrWhiteSpace(content) ? null : content.ToUpperInvariant();
       }
       catch
       {
@@ -221,7 +224,7 @@ namespace Entry.Auth.Services
       }
     }
 
-    private static string? CountryCodeToName(string code)
+    private static string? CountryCodeToName(string? code)
     {
       return code switch
       {

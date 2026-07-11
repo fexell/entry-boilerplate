@@ -8,6 +8,6 @@ namespace Entry.Auth.Services
   {
     Task<LoginRiskAssessment> EvaluateAsync(AppUser? user, string ip, string? deviceFingerprint);
     Task SendSuspiciousLoginEmailAsync(AppUser user, LoginRiskAssessment assessment);
-    Task<string?> GetCountryFromIpAsync(string ip);
+    Task<string?> GetCountryCodeFromIpAsync(string ip);
   }
 }

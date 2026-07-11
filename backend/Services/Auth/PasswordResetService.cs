@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using System.Web;
 
 using Entry.Auth.Models;
-using Entry.Auth.Services;
 
 namespace Entry.Auth.Services
 {
@@ -12,18 +12,21 @@ namespace Entry.Auth.Services
     private readonly IEmailService _emailSender;
     private readonly IConfiguration _config;
     private readonly IWebHostEnvironment _env;
+    private readonly ILogger<PasswordResetService> _logger;
 
     public PasswordResetService(
       UserManager<AppUser> userManager,
       IEmailService emailSender,
       IConfiguration config,
-      IWebHostEnvironment env
+      IWebHostEnvironment env,
+      ILogger<PasswordResetService> logger
     )
     {
       _userManager = userManager;
       _emailSender = emailSender;
       _config = config;
       _env = env;
+      _logger = logger;
     }
 
     // ------------------------------------------------------
@@ -45,24 +48,44 @@ namespace Entry.Auth.Services
       <p>If you did not make this request, you can ignore this email.</p>
       """;
 
-      await _emailSender.SendAsync(user.Email!, subject, body);
+      try
+      {
+        await _emailSender.SendAsync(user.Email!, subject, body);
 
-      return true;
+        _logger.LogInformation("Password reset email sent to UserId: {UserId}.", user.Id);
+        return true;
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to send password reset email to UserId: {UserId}.", user.Id);
+        return false;
+      }
     }
 
     // ------------------------------------------------------
     // RESET PASSWORD
     // ------------------------------------------------------
 
-    public async Task<bool> ResetPasswordAsync(AppUser user, string token, string newPassword)
+    public async Task<IdentityResult> ResetPasswordAsync(AppUser user, string token, string newPassword)
     {
       var result = await _userManager.ResetPasswordAsync(user, token, newPassword);
 
-      if(!result.Succeeded) return false;
+      if (!result.Succeeded)
+      {
+        _logger.LogWarning(
+          "Password reset failed for UserId: {UserId}. Errors: {Errors}",
+          user.Id,
+          string.Join(", ", result.Errors.Select(e => e.Description))
+        );
+
+        return result;
+      }
 
       await _userManager.UpdateSecurityStampAsync(user);
 
-      return true;
+      _logger.LogInformation("Password reset succeeded for UserId: {UserId}.", user.Id);
+
+      return result;
     }
   }
 }

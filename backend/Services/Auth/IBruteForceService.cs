@@ -5,8 +5,8 @@ namespace Entry.Auth.Services
   public interface IBruteForceService
   {
     Task LogAsync(string endpoint, string ip, string? email, string? userId, bool success);
-    Task<bool> IsIpBlocked(string ip);
-    Task<bool> IsEmailBlocked(string email);
-    Task<bool> IsUserBlocked(string userId);
+    Task<bool> IsIpBlockedAsync(string ip);
+    Task<bool> IsEmailBlockedAsync(string email);
+    Task<bool> IsUserBlockedAsync(string userId);
   }
 }

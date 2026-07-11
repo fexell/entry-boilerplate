@@ -1,11 +1,6 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
-using System;
-using System.Security.Claims;
-using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using System.Text;
-using System.Threading.Tasks;
-using System.IdentityModel.Tokens.Jwt;
 
 using Entry.Auth.Models;
 
@@ -14,11 +9,13 @@ namespace Entry.Auth.Services
   public class TwoFactorService : ITwoFactorService
   {
     private readonly UserManager<AppUser> _userManager;
+    private readonly ILogger<TwoFactorService> _logger;
     private const string Issuer = "Entry";
 
-    public TwoFactorService(UserManager<AppUser> userManager)
+    public TwoFactorService(UserManager<AppUser> userManager, ILogger<TwoFactorService> logger)
     {
       _userManager = userManager;
+      _logger = logger;
     }
 
     public async Task<TwoFactorSetupResult> GetSetupInfoAsync(AppUser user)
@@ -45,9 +42,15 @@ namespace Entry.Auth.Services
         code
       );
 
-      if(!isValid) return false;
+      if (!isValid)
+      {
+        _logger.LogWarning("2FA enable failed: invalid code. UserId: {UserId}", user.Id);
+        return false;
+      }
 
       await _userManager.SetTwoFactorEnabledAsync(user, true);
+
+      _logger.LogInformation("2FA enabled. UserId: {UserId}", user.Id);
 
       return true;
     }
@@ -55,6 +58,9 @@ namespace Entry.Auth.Services
     public async Task<IEnumerable<string>> GenerateRecoveryCodesAsync(AppUser user)
     {
       var codes = await _userManager.GenerateNewTwoFactorRecoveryCodesAsync(user, 10);
+
+      _logger.LogInformation("Recovery codes regenerated. UserId: {UserId}", user.Id);
+
       return codes ?? Enumerable.Empty<string>();
     }
 
@@ -68,38 +74,34 @@ namespace Entry.Auth.Services
       );
     }
 
-    public string? GetUserIdFromTwoFactorToken(string token)
-    {
-      var handler = new JwtSecurityTokenHandler();
-
-      try
-      {
-        var jwt = handler.ReadJwtToken(token);
-
-        var userId =
-          jwt.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value ??
-          jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
-
-        return userId;
-      }
-      catch
-      {
-        return null;
-      }
-    }
-
     public async Task<bool> VerifyCodeAsync(AppUser user, string code)
     {
-      return await _userManager.VerifyTwoFactorTokenAsync(
+      var isValid = await _userManager.VerifyTwoFactorTokenAsync(
         user,
         _userManager.Options.Tokens.AuthenticatorTokenProvider,
         code
       );
+
+      if (!isValid)
+      {
+        _logger.LogWarning("2FA verification failed: invalid code. UserId: {UserId}", user.Id);
+      }
+
+      return isValid;
     }
 
     public async Task<bool> VerifyRecoveryCodeAsync(AppUser user, string recoveryCode)
     {
       var result = await _userManager.RedeemTwoFactorRecoveryCodeAsync(user, recoveryCode);
+
+      if (!result.Succeeded)
+      {
+        _logger.LogWarning("2FA recovery code redemption failed. UserId: {UserId}", user.Id);
+      }
+      else
+      {
+        _logger.LogInformation("2FA recovery code redeemed. UserId: {UserId}", user.Id);
+      }
 
       return result.Succeeded;
     }
@@ -108,14 +110,20 @@ namespace Entry.Auth.Services
     {
       var isValid = await _userManager.VerifyTwoFactorTokenAsync(
         user,
-        TokenOptions.DefaultAuthenticatorProvider,
+        _userManager.Options.Tokens.AuthenticatorTokenProvider,
         code
       );
 
-      if(!isValid) return false;
+      if (!isValid)
+      {
+        _logger.LogWarning("2FA disable failed: invalid code. UserId: {UserId}", user.Id);
+        return false;
+      }
 
       await _userManager.SetTwoFactorEnabledAsync(user, false);
       await _userManager.ResetAuthenticatorKeyAsync(user);
+
+      _logger.LogInformation("2FA disabled. UserId: {UserId}", user.Id);
 
       return true;
     }
@@ -125,13 +133,13 @@ namespace Entry.Auth.Services
       var result = new StringBuilder();
       int currentPosition = 0;
 
-      while(currentPosition + 4 < unformattedKey.Length)
+      while (currentPosition + 4 < unformattedKey.Length)
       {
         result.Append(unformattedKey.AsSpan(currentPosition, 4)).Append(' ');
         currentPosition += 4;
       }
 
-      if(currentPosition < unformattedKey.Length)
+      if (currentPosition < unformattedKey.Length)
       {
         result.Append(unformattedKey.AsSpan(currentPosition));
       }

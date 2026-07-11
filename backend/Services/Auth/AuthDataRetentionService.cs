@@ -12,7 +12,9 @@ namespace Entry.Auth.Services
     private readonly ILogger<AuthDataRetentionService> _logger;
     private readonly IConfiguration _config;
 
+    private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan RunInterval = TimeSpan.FromHours(24);
+    private const int MinRetentionDays = 1;
 
     public AuthDataRetentionService(
       IServiceScopeFactory scopeFactory,
@@ -31,35 +33,41 @@ namespace Entry.Auth.Services
 
       try
       {
-        await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+        await Task.Delay(InitialDelay, stoppingToken);
       }
-      catch(TaskCanceledException)
+      catch (TaskCanceledException)
       {
         return;
       }
 
-      while (!stoppingToken.IsCancellationRequested)
+      using var timer = new PeriodicTimer(RunInterval);
+
+      do
       {
         try
         {
           await CleanupAsync(stoppingToken);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
           _logger.LogError(ex, "Unexpected error while cleaning up auth data.");
         }
-
-        try
-        {
-          await Task.Delay(RunInterval, stoppingToken);
-        }
-        catch(TaskCanceledException)
-        {
-          return;
-        }
       }
+      while (await WaitForNextTickAsync(timer, stoppingToken));
 
       _logger.LogInformation("AuthDataRetentionService stopped.");
+    }
+
+    private static async Task<bool> WaitForNextTickAsync(PeriodicTimer timer, CancellationToken stoppingToken)
+    {
+      try
+      {
+        return await timer.WaitForNextTickAsync(stoppingToken);
+      }
+      catch (OperationCanceledException)
+      {
+        return false;
+      }
     }
 
     private async Task CleanupAsync(CancellationToken stoppingToken)
@@ -67,21 +75,24 @@ namespace Entry.Auth.Services
       using var scope = _scopeFactory.CreateScope();
       var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-      var authAttemptsDays = _config.GetValue<int?>("DataRetention:AuthAttemptsDays") ?? 30;
-      var riskAssessmentsDays = _config.GetValue<int?>("DataRetention:LoginRiskAssessmentsDays") ?? 90;
+      var authAttemptsDays = GetRetentionDays("DataRetention:AuthAttemptsDays", defaultValue: 30);
+      var riskAssessmentsDays = GetRetentionDays("DataRetention:LoginRiskAssessmentsDays", defaultValue: 90);
 
-      var authAttemptsCutoff = DateTime.UtcNow.AddDays(-authAttemptsDays);
-      var riskAssessmentsCutoff = DateTime.UtcNow.AddDays(-riskAssessmentsDays);
+      var deletedAttempts = await TryDeleteAsync(
+        () => db.AuthAttempts
+          .Where(x => x.Timestamp < DateTime.UtcNow.AddDays(-authAttemptsDays))
+          .ExecuteDeleteAsync(stoppingToken),
+        "AuthAttempts"
+      );
 
-      var deletedAttempts = await db.AuthAttempts
-        .Where(x => x.Timestamp < authAttemptsCutoff)
-        .ExecuteDeleteAsync(stoppingToken);
+      var deletedAssessments = await TryDeleteAsync(
+        () => db.LoginRiskAssessments
+          .Where(x => x.Timestamp < DateTime.UtcNow.AddDays(-riskAssessmentsDays))
+          .ExecuteDeleteAsync(stoppingToken),
+        "LoginRiskAssessments"
+      );
 
-      var deletedAssessments = await db.LoginRiskAssessments
-        .Where(x => x.Timestamp < riskAssessmentsCutoff)
-        .ExecuteDeleteAsync(stoppingToken);
-
-      if(deletedAttempts > 0 || deletedAssessments > 0)
+      if (deletedAttempts > 0 || deletedAssessments > 0)
       {
         _logger.LogInformation(
           "Data retention cleanup: removed {AuthAttempts} AuthAttempts (older than {AuthDays}d) and {RiskAssessments} LoginRiskAssessments (older than {RiskDays}d).",
@@ -90,6 +101,39 @@ namespace Entry.Auth.Services
           deletedAssessments,
           riskAssessmentsDays
         );
+      }
+    }
+
+    private int GetRetentionDays(string configKey, int defaultValue)
+    {
+      var value = _config.GetValue<int?>(configKey) ?? defaultValue;
+
+      if (value < MinRetentionDays)
+      {
+        _logger.LogWarning(
+          "Configured retention value for {ConfigKey} ({Value}) is below the minimum of {MinDays}d. Falling back to {DefaultValue}d.",
+          configKey,
+          value,
+          MinRetentionDays,
+          defaultValue
+        );
+
+        return defaultValue;
+      }
+
+      return value;
+    }
+
+    private async Task<int> TryDeleteAsync(Func<Task<int>> deleteAction, string tableName)
+    {
+      try
+      {
+        return await deleteAction();
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Failed to clean up expired records from {TableName}.", tableName);
+        return 0;
       }
     }
   }

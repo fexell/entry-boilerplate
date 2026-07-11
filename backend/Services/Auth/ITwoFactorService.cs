@@ -9,7 +9,6 @@ namespace Entry.Auth.Services
     Task<TwoFactorSetupResult> GetSetupInfoAsync(AppUser user);
     Task<bool> VerifyAndEnableAsync(AppUser user, string code);
     Task<IEnumerable<string>> GenerateRecoveryCodesAsync(AppUser user);
-    string? GetUserIdFromTwoFactorToken(string token);
     
     Task<bool> VerifyCodeAsync(AppUser user, string code);
     Task<bool> VerifyRecoveryCodeAsync(AppUser user, string recoveryCode);

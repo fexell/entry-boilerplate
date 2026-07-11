@@ -17,6 +17,7 @@ namespace Entry.Auth.Services
     private readonly IVerificationEmailService _verificationEmailService;
     private readonly ITwoFactorService _twoFactorService;
     private readonly AppDbContext _db;
+    private readonly ILogger<AuthService> _logger;
 
     public AuthService(
       UserManager<AppUser> userManager,
@@ -26,7 +27,8 @@ namespace Entry.Auth.Services
       IUserService userService,
       IVerificationEmailService verificationEmailService,
       ITwoFactorService twoFactorService,
-      AppDbContext db
+      AppDbContext db,
+      ILogger<AuthService> logger
     )
     {
       _userManager = userManager;
@@ -37,6 +39,20 @@ namespace Entry.Auth.Services
       _verificationEmailService = verificationEmailService;
       _twoFactorService = twoFactorService;
       _db = db;
+      _logger = logger;
+    }
+
+    // ------------------------------------------------------
+    // HELPERS
+    // ------------------------------------------------------
+
+    private static AuthResultDto Fail(string error)
+    {
+      return new AuthResultDto
+      {
+        Success = false,
+        Errors = new List<string> { error }
+      };
     }
 
     // ------------------------------------------------------
@@ -74,57 +90,47 @@ namespace Entry.Auth.Services
 
     public async Task<AuthResultDto> LoginAsync(LoginDto dto)
     {
+      var normalizedEmail = _userManager.NormalizeEmail(dto.Email);
+
       var user = await _userManager.Users
-        .FirstOrDefaultAsync(u => u.Email == dto.Email);
+        .FirstOrDefaultAsync(u => u.NormalizedEmail == normalizedEmail);
 
       if (user == null)
       {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Invalid credentials." }
-        };
+        // Simulate a password hash to avoid timing attacks
+        _userManager.PasswordHasher.HashPassword(null!, "dummy");
+
+        _logger.LogWarning("Login attempt failed: unknown email.");
+        return Fail("Invalid credentials.");
       }
 
       var signInResult = await _signInManager.CheckPasswordSignInAsync(user, dto.Password!, lockoutOnFailure: true);
 
       if (signInResult.IsLockedOut)
       {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Account is locked. Please try again later." }
-        };
+        _logger.LogWarning("Login attempt failed: account locked out. UserId: {UserId}", user.Id);
+        return Fail("Account is locked. Please try again later.");
       }
 
       if (signInResult.IsNotAllowed)
       {
         if (!user.EmailConfirmed)
         {
-          return new AuthResultDto
-          {
-            Success = false,
-            Errors = new List<string> { "Please verify your email before logging in." }
-          };
+          _logger.LogWarning("Login attempt failed: email not confirmed. UserId: {UserId}", user.Id);
+          return Fail("Please verify your email before logging in.");
         }
 
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Login not allowed." }
-        };
+        _logger.LogWarning("Login attempt failed: not allowed. UserId: {UserId}", user.Id);
+        return Fail("Login not allowed.");
       }
 
       if (!signInResult.Succeeded)
       {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Invalid credentials." }
-        };
+        _logger.LogWarning("Login attempt failed: invalid credentials. UserId: {UserId}", user.Id);
+        return Fail("Invalid credentials.");
       }
 
-      if(await _userManager.GetTwoFactorEnabledAsync(user))
+      if (await _userManager.GetTwoFactorEnabledAsync(user))
       {
         var twoFactorToken = _jwtService.GenerateTwoFactorToken(user);
 
@@ -145,36 +151,18 @@ namespace Entry.Auth.Services
 
     public async Task<AuthResultDto> RefreshAsync(string refreshToken)
     {
-      var existing = await _db.RefreshTokens
-        .FirstOrDefaultAsync(x => x.Token == refreshToken);
-
-      if (existing == null || existing.Revoked || existing.ExpiresAt < DateTime.UtcNow)
+      var result = await _refreshTokenService.RotateRefreshTokenAsync(refreshToken, expectedUserId: null);
+      if (result == null)
       {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Invalid or expired refresh token." }
-        };
+        _logger.LogWarning("Invalid or expired refresh token.");
+        return Fail("Invalid or expired refresh token.");
       }
 
-      var user = await _userManager.FindByIdAsync(existing.UserId);
+      var user = await _userManager.FindByIdAsync(result.UserId);
       if (user == null)
       {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "User not found." }
-        };
-      }
-
-      var pair = await _refreshTokenService.RefreshTokenAsync(refreshToken);
-      if (pair == null)
-      {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Failed to refresh token." }
-        };
+        _logger.LogError("User not found after valid refresh token rotation. UserId: {UserId}", result.UserId);
+        return Fail("User not found.");
       }
 
       var userMe = await _userService.GetUserMeAsync(user);
@@ -182,9 +170,9 @@ namespace Entry.Auth.Services
       return new AuthResultDto
       {
         Success = true,
-        AccessToken = pair.AccessToken,
-        RefreshToken = pair.RefreshToken,
-        ExpiresIn = pair.ExpiresInSeconds,
+        AccessToken = result.AccessToken,
+        RefreshToken = result.RefreshToken,
+        ExpiresIn = result.ExpiresInSeconds,
         User = userMe
       };
     }
@@ -195,26 +183,11 @@ namespace Entry.Auth.Services
 
     public async Task<AuthResultDto> SilentRefreshAsync(AppUser user, string refreshToken)
     {
-      var existing = await _db.RefreshTokens
-        .FirstOrDefaultAsync(x => x.Token == refreshToken);
-
-      if (existing == null || existing.Revoked || existing.ExpiresAt < DateTime.UtcNow || existing.UserId != user.Id)
-      {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Invalid or expired refresh token." }
-        };
-      }
-
       var pair = await _refreshTokenService.RefreshTokenAsync(refreshToken);
       if (pair == null)
       {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Failed to refresh token." }
-        };
+        _logger.LogWarning("Invalid or expired refresh token during silent refresh. UserId: {UserId}", user.Id);
+        return Fail("Invalid or expired refresh token.");
       }
 
       var userMe = await _userService.GetUserMeAsync(user);
@@ -258,6 +231,39 @@ namespace Entry.Auth.Services
     }
 
     // ------------------------------------------------------
+    // TWO-FACTOR LOGIN
+    // ------------------------------------------------------
+
+    public async Task<AuthResultDto> VerifyTwoFactorLoginAsync(VerifyTwoFactorLoginDto dto)
+    {
+      var userId = _jwtService.ValidateTwoFactorToken(dto.TwoFactorToken);
+
+      if (userId is null)
+      {
+        return Fail("Your session has expired.");
+      }
+
+      var user = await _userManager.FindByIdAsync(userId);
+
+      if (user == null)
+      {
+        return Fail("Your session has expired. Please log in again.");
+      }
+
+      var verified = dto.IsRecoveryCode
+        ? await _twoFactorService.VerifyRecoveryCodeAsync(user, dto.Code)
+        : await _twoFactorService.VerifyCodeAsync(user, dto.Code);
+
+      if (!verified)
+      {
+        _logger.LogWarning("Two-factor verification failed. UserId: {UserId}", user.Id);
+        return Fail("Invalid verification code.");
+      }
+
+      return await GenerateAuthResultAsync(user);
+    }
+
+    // ------------------------------------------------------
     // GENERATE AUTH RESULT
     // ------------------------------------------------------
 
@@ -275,46 +281,6 @@ namespace Entry.Auth.Services
         ExpiresIn = jwt.ExpiresInSeconds,
         User = userMe
       };
-    }
-
-    public async Task<AuthResultDto> VerifyTwoFactorLoginAsync(VerifyTwoFactorLoginDto dto)
-    {
-      var userId = _jwtService.ValidateTwoFactorToken(dto.TwoFactorToken);
-
-      if(userId is null)
-      {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Your session has expired." }
-        };
-      }
-
-      var user = await _userManager.FindByIdAsync(userId);
-
-      if(user == null)
-      {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Your session has expired. Please log in again." }
-        };
-      }
-
-      var verified = dto.IsRecoveryCode
-        ? await _twoFactorService.VerifyRecoveryCodeAsync(user, dto.Code)
-        : await _twoFactorService.VerifyCodeAsync(user, dto.Code);
-
-      if (!verified)
-      {
-        return new AuthResultDto
-        {
-          Success = false,
-          Errors = new List<string> { "Invalid verification code." }
-        };
-      }
-
-      return await GenerateAuthResultAsync(user);
     }
   }
 }
