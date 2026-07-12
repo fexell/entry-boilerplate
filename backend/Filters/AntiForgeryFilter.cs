@@ -2,6 +2,9 @@ using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.Extensions.Logging;
+
+using Entry.Auth.Configuration;
 
 namespace Entry.Auth.Filters
 {
@@ -12,13 +15,13 @@ namespace Entry.Auth.Filters
       "GET", "HEAD", "OPTIONS", "TRACE"
     };
 
-    private const string HeaderName = "X-CSRF-TOKEN";
-
     private readonly IAntiforgery _antiforgery;
+    private readonly ILogger<AntiforgeryFilter> _logger;
 
-    public AntiforgeryFilter(IAntiforgery antiforgery)
+    public AntiforgeryFilter(IAntiforgery antiforgery, ILogger<AntiforgeryFilter> logger)
     {
       _antiforgery = antiforgery;
+      _logger = logger;
     }
 
     public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
@@ -46,8 +49,12 @@ namespace Entry.Auth.Filters
       // läsa Request.Form - vilket kastar ett oskyddat InvalidOperationException
       // för JSON-requests (fel Content-Type) och kraschar med 500 istället
       // för att ge ett rent 403-svar.
-      if (!request.Headers.ContainsKey(HeaderName))
+      if (!request.Headers.ContainsKey(CsrfConstants.HeaderName))
       {
+        _logger.LogInformation(
+          "CSRF check failed: missing {Header} header for {Method} {Path}",
+          CsrfConstants.HeaderName, request.Method, request.Path);
+
         context.Result = Forbidden();
         return;
       }
@@ -56,11 +63,25 @@ namespace Entry.Auth.Filters
       {
         await _antiforgery.ValidateRequestAsync(context.HttpContext);
       }
-      catch (Exception)
+      catch (AntiforgeryValidationException ex)
       {
-        // Fångar AntiforgeryValidationException (fel/saknad token) och alla
-        // andra fel ramverket kan kasta internt - CSRF-fel ska alltid ge ett
-        // rent 403, aldrig en oskyddad 500.
+        // Förväntat: användarens token saknas/är fel/utgången. Vanligt "brus"
+        // (t.ex. gamla flikar, race vid token-rotation) - logga lågt.
+        _logger.LogInformation(ex,
+          "CSRF validation failed for {Method} {Path}", request.Method, request.Path);
+
+        context.Result = Forbidden();
+        return;
+      }
+      catch (Exception ex)
+      {
+        // Oväntat: något annat gick sönder i ramverket (t.ex. trasig
+        // DataProtection-nyckelring, felkonfigurerad cookie). Fortfarande
+        // ett rent 403 utåt, men loggat som en varning så det syns i drift
+        // och inte förväxlas med vanliga CSRF-avslag.
+        _logger.LogWarning(ex,
+          "Unexpected error during CSRF validation for {Method} {Path}", request.Method, request.Path);
+
         context.Result = Forbidden();
         return;
       }

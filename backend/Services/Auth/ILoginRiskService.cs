@@ -6,8 +6,8 @@ namespace Entry.Auth.Services
 {
   public interface ILoginRiskService
   {
-    Task<LoginRiskAssessment> EvaluateAsync(AppUser? user, string ip, string? deviceFingerprint);
-    Task SendSuspiciousLoginEmailAsync(AppUser user, LoginRiskAssessment assessment);
-    Task<string?> GetCountryCodeFromIpAsync(string ip);
+    Task<(LoginRiskAssessment? Assessment, ServiceError? Error)> EvaluateAsync(AppUser? user, string ip, string? deviceFingerprint);
+    Task<ServiceError?> SendSuspiciousLoginEmailAsync(AppUser user, LoginRiskAssessment assessment);
+    Task<(string? CountryCode, ServiceError? Error)> GetCountryCodeFromIpAsync(string ip);
   }
 }

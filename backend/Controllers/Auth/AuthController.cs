@@ -18,6 +18,12 @@ namespace Entry.Auth.Controllers
   [Route("api/[controller]")]
   public class AuthController : ControllerBase
   {
+    // Duplicated across Login/VerifyTwoFactorLogin/Refresh before - single
+    // source now. Consider moving to CookieHelper or config if other
+    // controllers ever need the same lifetimes.
+    private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromHours(1);
+    private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
+
     private readonly IAuthService _authService;
     private readonly IUserService _userService;
     private readonly IVerificationEmailService _verificationEmailService;
@@ -72,6 +78,7 @@ namespace Entry.Auth.Controllers
     // ------------------------------------------------------
 
     [AllowAnonymous]
+    [EnableRateLimiting("AuthPolicy")]
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
@@ -107,6 +114,7 @@ namespace Entry.Auth.Controllers
     // ------------------------------------------------------
 
     [AllowAnonymous]
+    [EnableRateLimiting("AuthPolicy")]
     [HttpPost("resend-verification")]
     public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationDto dto)
     {
@@ -123,8 +131,8 @@ namespace Entry.Auth.Controllers
     // ------------------------------------------------------
 
     [AllowAnonymous]
-    [HttpPost("login")]
     [EnableRateLimiting("AuthPolicy")]
+    [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
       var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -135,18 +143,18 @@ namespace Entry.Auth.Controllers
 
       if (await _bruteForceService.IsIpBlockedAsync(ip))
       {
-        return StatusCode(429, new { message = "Too many requests from this IP. Please try again later." });
+        return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Too many requests from this IP. Please try again later." });
       }
 
       if (!string.IsNullOrWhiteSpace(dto.Email) && await _bruteForceService.IsEmailBlockedAsync(dto.Email))
       {
-        return StatusCode(429, new { message = "Too many requests from this email. Please try again later." });
+        return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Too many requests from this email. Please try again later." });
       }
 
       var user = await _userService.GetByEmailAsync(dto.Email!);
       if (user != null && await _bruteForceService.IsUserBlockedAsync(user.Id))
       {
-        return StatusCode(429, new { message = "Too many requests from this user. Please try again later." });
+        return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Too many requests from this user. Please try again later." });
       }
 
       // -----------------------------
@@ -184,11 +192,22 @@ namespace Entry.Auth.Controllers
       // -----------------------------
 
       var deviceFingerprint = dto.DeviceFingerprint;
-      var risk = await _loginRiskService.EvaluateAsync(user, ip, deviceFingerprint);
+      var (risk, riskError) = await _loginRiskService.EvaluateAsync(user, ip, deviceFingerprint);
+
+      if(riskError != null)
+      {
+        return Ok(new
+        {
+          success = true,
+          user= result.User,
+          message = "Login successful, but risk assessment failed.",
+          code = riskError.Code,
+        });
+      }
 
       var requiresTwoFactor = result.RequiresTwoFactor
-        || risk.RiskLevel == "High"
-        || (risk.RiskLevel == "Medium" && user!.TwoFactorEnabled);
+        || risk.RiskLevel == RiskLevel.High
+        || (risk.RiskLevel == RiskLevel.Medium && user!.TwoFactorEnabled);
 
       // -----------------------------
       // 5. 2FA REQUIRED -> RETURN
@@ -198,8 +217,8 @@ namespace Entry.Auth.Controllers
         return Ok(new
         {
           requiresTwoFactor = true,
-          reason = risk.RiskLevel == "High" ? "suspicious_login"
-            : risk.RiskLevel == "Medium" ? "medium_risk"
+          reason = risk.RiskLevel == RiskLevel.High ? "suspicious_login"
+            : risk.RiskLevel == RiskLevel.Medium ? "medium_risk"
             : (string?)null,
           twoFactorToken = result.TwoFactorToken
         });
@@ -208,8 +227,8 @@ namespace Entry.Auth.Controllers
       // -----------------------------
       // 6. SET COOKIES
       // -----------------------------
-      CookieHelper.Set(Response, "accessToken", result.AccessToken!, TimeSpan.FromHours(1));
-      CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, TimeSpan.FromDays(30));
+      CookieHelper.Set(Response, "accessToken", result.AccessToken!, AccessTokenLifetime);
+      CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, RefreshTokenLifetime);
 
       // -----------------------------
       // 7. UPDATE USER
@@ -238,8 +257,8 @@ namespace Entry.Auth.Controllers
     }
 
     [AllowAnonymous]
-    [HttpPost("2fa/verify-login")]
     [EnableRateLimiting("AuthPolicy")]
+    [HttpPost("2fa/verify-login")]
     public async Task<IActionResult> VerifyTwoFactorLogin([FromBody] VerifyTwoFactorLoginDto dto)
     {
       var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -247,17 +266,19 @@ namespace Entry.Auth.Controllers
       // -----------------------------
       // 1. BRUTE-FORCE CHECKS
       // -----------------------------
+      // Check the cheap IP block before doing any token validation work,
+      // same ordering principle as Login below.
+
+      if (await _bruteForceService.IsIpBlockedAsync(ip))
+        return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Too many requests from this IP. Please try again later." });
 
       var userId = _jwtService.ValidateTwoFactorToken(dto.TwoFactorToken!);
 
       if (userId == null)
         return Unauthorized(new { message = "Invalid or expired 2FA token." });
 
-      if (await _bruteForceService.IsIpBlockedAsync(ip))
-        return StatusCode(429, new { message = "Too many requests from this IP. Please try again later." });
-
       if (await _bruteForceService.IsUserBlockedAsync(userId))
-        return StatusCode(429, new { message = "Too many 2FA attempts from this user. Please try again later." });
+        return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Too many 2FA attempts from this user. Please try again later." });
 
       // -----------------------------
       // 2. RUN 2FA-VERIFICATION
@@ -284,14 +305,35 @@ namespace Entry.Auth.Controllers
         return Unauthorized(new { message = "Verification failed.", errors = result.Errors });
 
       // -----------------------------
-      // 5. SET COOKIES
+      // 5. RISK ASSESSMENT + UPDATE USER
+      // -----------------------------
+      // Login only updates LastKnownIp/Country/DeviceFingerprint on the
+      // direct (non-2FA) path - without this, any user who goes through
+      // 2FA never gets those fields refreshed, so LoginRiskService keeps
+      // comparing future logins against permanently stale data.
+
+      var user = await _userService.GetByIdAsync(userId);
+
+      if (user is not null)
+      {
+        var (risk, riskError) = await _loginRiskService.EvaluateAsync(user, ip, dto.DeviceFingerprint);
+
+        user.LastKnownIp = ip;
+        user.LastKnownCountry = risk!.Country;
+        user.LastKnownDeviceFingerprint = dto.DeviceFingerprint;
+
+        await _userService.UpdateAsync(user);
+      }
+
+      // -----------------------------
+      // 6. SET COOKIES
       // -----------------------------
 
-      CookieHelper.Set(Response, "accessToken", result.AccessToken!, TimeSpan.FromHours(1));
-      CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, TimeSpan.FromDays(30));
+      CookieHelper.Set(Response, "accessToken", result.AccessToken!, AccessTokenLifetime);
+      CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, RefreshTokenLifetime);
 
       // -----------------------------
-      // 6. RETURN USER AND MESSAGE
+      // 7. RETURN USER AND MESSAGE
       // -----------------------------
 
       return Ok(new
@@ -320,8 +362,8 @@ namespace Entry.Auth.Controllers
       if (!result.Success)
         return BadRequest(new { message = "Invalid refresh token.", errors = result.Errors });
 
-      CookieHelper.Set(Response, "accessToken", result.AccessToken!, TimeSpan.FromHours(1));
-      CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, TimeSpan.FromDays(30));
+      CookieHelper.Set(Response, "accessToken", result.AccessToken!, AccessTokenLifetime);
+      CookieHelper.Set(Response, "refreshToken", result.RefreshToken!, RefreshTokenLifetime);
 
       return Ok(new { user = result.User });
     }
@@ -331,6 +373,7 @@ namespace Entry.Auth.Controllers
     // ------------------------------------------------------
 
     [AllowAnonymous]
+    [EnableRateLimiting("AuthPolicy")]
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {

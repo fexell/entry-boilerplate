@@ -12,8 +12,15 @@ namespace Entry.Auth.Models
     public string? DeviceFingerprint { get; set; }
 
     public int RiskScore { get; set; }
-    public string RiskLevel { get; set; } = default!;
+    public RiskLevel RiskLevel { get; set; }
 
     public DateTime Timestamp { get; set; }
+  }
+
+  public enum RiskLevel
+  {
+    Low = 0,
+    Medium = 1,
+    High = 2
   }
 }

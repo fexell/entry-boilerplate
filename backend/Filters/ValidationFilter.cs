@@ -11,12 +11,15 @@ namespace Entry.Auth.Filters
       {
         var errors = context.ModelState.Values
             .SelectMany(v => v.Errors)
-            .Select(e => e.ErrorMessage)
+            .Select(e => string.IsNullOrEmpty(e.ErrorMessage)
+              ? (e.Exception?.Message ?? "Invalid value.")
+              : e.ErrorMessage)
             .ToList();
 
         context.Result = new BadRequestObjectResult(new
         {
           message = "Invalid input.",
+          code = "VALIDATION_ERROR",
           errors
         });
       }

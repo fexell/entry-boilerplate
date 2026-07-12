@@ -105,11 +105,12 @@ builder.Services.AddRateLimiter(options =>
     {
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
         context.HttpContext.Response.ContentType = "application/json";
+        context.HttpContext.Response.Headers.RetryAfter = "60";
 
         await context.HttpContext.Response.WriteAsJsonAsync(new
         {
             message = "Too many requests. Please try again later.",
-            errors = new[] { "Rate limit exceeded." }
+            code = "RATE_LIMITED"
         }, token);
     };
 
@@ -190,10 +191,16 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseRouting();
 
+// CORS must run before anything that can short-circuit the pipeline
+// (like BruteForceMiddleware returning a 429 directly). Middleware that
+// runs before UseCors never gets its response headers touched by it - so
+// a rate-limited response would arrive at the browser without an
+// Access-Control-Allow-Origin header and get silently blocked as a CORS
+// failure instead of being readable as a 429 by the frontend.
+app.UseCors("Frontend");
+
 // Brute force protection
 app.UseMiddleware<BruteForceMiddleware>();
-
-app.UseCors("Frontend");
 
 // Silent refresh BEFORE authentication
 // app.UseMiddleware<SilentRefreshMiddleware>();

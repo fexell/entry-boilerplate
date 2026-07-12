@@ -2,6 +2,9 @@ import { toast } from "sonner"
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
+// Must match Entry.Auth.Configuration.CsrfConstants.HeaderName on the backend.
+const CSRF_HEADER_NAME = "X-CSRF-TOKEN"
+
 const SAFE_METHODS = new Set(["GET", "HEAD"])
 
 let refreshPromise = null
@@ -82,21 +85,6 @@ const invalidateCsrfToken = () => {
   csrfTokenPromise = null
 }
 
-// Safely parses a Response body as JSON, returning null instead of throwing
-// if the body is empty, truncated, or not valid JSON.
-const safeJson = async (res) => {
-  const text = await res.text().catch(() => "")
-
-  if (!text) return null
-
-  try {
-    return JSON.parse(text)
-  } catch (err) {
-    console.error("Failed to parse JSON response:", text)
-    return null
-  }
-}
-
 const api = async (path, options = {}) => {
   const { skipAuthRetry, skipCsrfRetry, silent, ...fetchOptions } = options
 
@@ -109,7 +97,7 @@ const api = async (path, options = {}) => {
 
       fetchOptions.headers = {
         ...fetchOptions.headers,
-        "X-CSRF-TOKEN": csrfToken,
+        [CSRF_HEADER_NAME]: csrfToken,
       }
     } catch (err) {
       // Surface the REAL reason instead of letting the request go out
@@ -180,7 +168,7 @@ const api = async (path, options = {}) => {
 
     // 4. Non-JSON body, ex. text/plain från en exception-handler
     else if (rawText) {
-      backendErrors = [rawText]
+      backendErrors = [rawText.slice(0, 300)]
     }
 
     // 5. Fallback

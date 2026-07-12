@@ -10,10 +10,10 @@ namespace Entry.Auth.Data
   {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<RefreshToken> RefreshTokens { get; set; }
-    public DbSet<UserSession> UserSessions { get; set; }
-    public DbSet<AuthAttempt> AuthAttempts { get; set; }
-    public DbSet<LoginRiskAssessment> LoginRiskAssessments { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+    public DbSet<UserSession> UserSessions { get; set; } = null!;
+    public DbSet<AuthAttempt> AuthAttempts { get; set; } = null!;
+    public DbSet<LoginRiskAssessment> LoginRiskAssessments { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -43,7 +43,7 @@ namespace Entry.Auth.Data
       {
         entity.HasKey(x => x.Id);
 
-        entity.Property(x => x.Token).IsRequired();
+        entity.Property(x => x.Token).IsRequired().HasMaxLength(512);
         entity.Property(x => x.UserId).IsRequired();
 
         entity.HasIndex(x => x.Token).IsUnique();
@@ -64,6 +64,7 @@ namespace Entry.Auth.Data
         entity.Property(x => x.LastUsedAt).IsRequired();
 
         entity.HasIndex(x => x.UserId);
+        entity.HasIndex(x => x.LastUsedAt);
 
         entity.HasOne(x => x.User)
               .WithMany(u => u.Sessions)
@@ -103,6 +104,18 @@ namespace Entry.Auth.Data
 
         entity.HasIndex(x => x.UserId);
         entity.HasIndex(x => x.IpAddress);
+
+        // NOTE: UserId was indexed but had no FK constraint, unlike AuthAttempt.
+        // Assumes UserId is a nullable string with no navigation property on LoginRiskAssessment.
+        // Adjust User type / nav property if that's not accurate for your model.
+        entity.HasOne<AppUser>()
+              .WithMany()
+              .HasForeignKey(x => x.UserId)
+              .OnDelete(DeleteBehavior.SetNull);
+
+        entity.Property(x => x.RiskLevel)
+          .HasConversion<string>()
+          .HasMaxLength(16);
       });
     }
   }

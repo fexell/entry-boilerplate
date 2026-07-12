@@ -45,7 +45,7 @@ namespace Entry.Auth.Services
       _config = config;
     }
 
-    public async Task<LoginRiskAssessment> EvaluateAsync(
+    public async Task<(LoginRiskAssessment? Assessment, ServiceError? Error)> EvaluateAsync(
       AppUser? user,
       string ip,
       string? deviceFingerprint
@@ -53,7 +53,7 @@ namespace Entry.Auth.Services
     {
       // NOTE: countryCode is an ISO code (e.g. "SE"), not a display name.
       // Display names are only resolved when rendering the email.
-      var countryCode = await GetCountryCodeFromIpAsync(ip);
+      var (countryCode, geoError) = await GetCountryCodeFromIpAsync(ip);
 
       int score = 0;
 
@@ -78,9 +78,10 @@ namespace Entry.Auth.Services
         score += UnusualTimeScore;
       }
 
-      string level = score >= HighRiskThreshold ? "High" :
-        score >= MediumRiskThreshold ? "Medium" :
-        "Low";
+      RiskLevel level =
+        score >= HighRiskThreshold ? RiskLevel.High :
+        score >= MediumRiskThreshold ? RiskLevel.Medium :
+        RiskLevel.Low;
 
       var assessment = new LoginRiskAssessment
       {
@@ -96,15 +97,27 @@ namespace Entry.Auth.Services
       _db.LoginRiskAssessments.Add(assessment);
       await _db.SaveChangesAsync();
 
-      if (level == "High" && user != null)
+      ServiceError? emailError = null;
+
+      if (level == RiskLevel.High && user != null)
       {
-        await SendSuspiciousLoginEmailAsync(user, assessment);
+        emailError = await SendSuspiciousLoginEmailAsync(user, assessment);
       }
 
-      return assessment;
+      if(emailError != null)
+      {
+        return (assessment, emailError);
+      }
+
+      if(geoError != null)
+      {
+        return (assessment, geoError);
+      }
+
+      return (assessment, null);
     }
 
-    public async Task SendSuspiciousLoginEmailAsync(AppUser user, LoginRiskAssessment assessment)
+    public async Task<ServiceError?> SendSuspiciousLoginEmailAsync(AppUser user, LoginRiskAssessment assessment)
     {
       var subject = "Security Alert: Suspicious Login Detected";
 
@@ -113,7 +126,7 @@ namespace Entry.Auth.Services
       );
       var ipDisplay = HttpUtility.HtmlEncode(assessment.IpAddress);
       var fingerprintDisplay = HttpUtility.HtmlEncode(assessment.DeviceFingerprint ?? "Unknown");
-      var riskLevelDisplay = HttpUtility.HtmlEncode(assessment.RiskLevel);
+      var riskLevelDisplay = HttpUtility.HtmlEncode(assessment.RiskLevel.ToString());
 
       var body = $"""
       <p>Hi,</p>
@@ -130,28 +143,39 @@ namespace Entry.Auth.Services
       </p>
       """;
 
-      await _emailService.SendAsync(user.Email!, subject, body);
+      try
+      {
+        await _emailService.SendAsync(user.Email!, subject, body);
+        return null;
+      }
+      catch
+      {
+        return new ServiceError{
+          Message = "Failed to send security alert email.",
+          Code = "EMAIL_SEND_FAILED"
+        };
+      }
     }
 
-    public async Task<string?> GetCountryCodeFromIpAsync(string ip)
+    public async Task<(string? CountryCode, ServiceError? Error)> GetCountryCodeFromIpAsync(string ip)
     {
       if (IsPrivateOrLoopback(ip))
       {
-        return null;
+        return (null, null);
       }
 
       var cacheKey = $"geoip:{ip}";
 
       if (_cache.TryGetValue<string?>(cacheKey, out var cached))
       {
-        return cached;
+        return (cached, null);
       }
 
-      var result = await FetchCountryCodeFromIpAsync(ip);
+      var (result, error) = await FetchCountryCodeFromIpAsync(ip);
 
       _cache.Set(cacheKey, result, result != null ? HitTtl : MissTtl);
 
-      return result;
+      return (result, error);
     }
 
     private static bool IsPrivateOrLoopback(string ip)
@@ -191,7 +215,7 @@ namespace Entry.Auth.Services
       return false;
     }
 
-    private async Task<string?> FetchCountryCodeFromIpAsync(string ip)
+    private async Task<(string? CountryCode, ServiceError? Error)> FetchCountryCodeFromIpAsync(string ip)
     {
       try
       {
@@ -199,7 +223,11 @@ namespace Entry.Auth.Services
 
         if (string.IsNullOrWhiteSpace(token))
         {
-          return null;
+          return (null, new ServiceError
+          {
+            Message = "IP geolocation is not configured.",
+            Code = "GEOIP_NOT_CONFIGURED"
+          });
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Get, $"https://ipinfo.io/{ip}/country");
@@ -209,18 +237,32 @@ namespace Entry.Auth.Services
 
         if (!response.IsSuccessStatusCode)
         {
-          return null;
+          return (null, new ServiceError
+          {
+            Message = "Failed to resolve country from IP.",
+            Code = "GEOIP_LOOKUP_FAILED"
+          });
         }
 
         var content = (await response.Content.ReadAsStringAsync()).Trim();
+        var country = string.IsNullOrWhiteSpace(content) ? null : content.ToUpperInvariant();
 
-        return string.IsNullOrWhiteSpace(content) ? null : content.ToUpperInvariant();
+        return (country, country is null
+          ? new ServiceError
+          {
+            Message = "Failed to resolve country from IP.",
+            Code = "GEOIP_LOOKUP_FAILED"
+          } : null);
       }
       catch
       {
         // Timeouts, DNS failures, rate limiting, etc. all fall back to
         // "unknown country" rather than blocking or failing the login.
-        return null;
+        return (null, new ServiceError
+        {
+          Message = "Failed to resolve country from IP.",
+          Code = "GEOIP_LOOKUP_FAILED"
+        });
       }
     }
 

@@ -32,7 +32,7 @@ namespace Entry.Auth.Extensions
               errorNumbersToAdd: null
             );
 
-            sql.MigrationsAssembly(typeof(Program).Assembly.FullName);
+            sql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
           }
         )
       );
@@ -50,10 +50,7 @@ namespace Entry.Auth.Extensions
       })
       .AddRoles<IdentityRole>()
       .AddEntityFrameworkStores<AppDbContext>()
-      .AddDefaultTokenProviders()
-      .AddSignInManager()
-      .AddUserManager<UserManager<AppUser>>()
-      .AddRoleManager<RoleManager<IdentityRole>>();
+      .AddDefaultTokenProviders();
 
       return services;
     }
@@ -63,7 +60,10 @@ namespace Entry.Auth.Extensions
       IConfiguration config
     )
     {
-      var key = Encoding.UTF8.GetBytes(config["Jwt:Key"]!);
+      var jwtKey = config["Jwt:Key"]
+        ?? throw new InvalidOperationException("Missing required configuration value 'Jwt:Key'.");
+
+      var key = Encoding.UTF8.GetBytes(jwtKey);
 
       services.AddAuthentication(options =>
       {
@@ -78,9 +78,8 @@ namespace Entry.Auth.Extensions
         {
           ValidateIssuer = true,
           ValidateAudience = true,
-          ValidateIssuerSigningKey= true,
+          ValidateIssuerSigningKey = true,
           ValidateLifetime = true,
-          ValidateActor = true,
           RequireExpirationTime = true,
           RequireSignedTokens = true,
           ValidateTokenReplay = true,
@@ -170,7 +169,7 @@ namespace Entry.Auth.Extensions
       services.AddAntiforgery(options =>
       {
         // Header som frontend måste skicka på varje muterande request
-        options.HeaderName = "X-CSRF-TOKEN";
+        options.HeaderName = CsrfConstants.HeaderName;
 
         // Cookien får INTE vara httpOnly - JS behöver kunna se att den finns
         // (själva värdet i cookien används internt av Antiforgery, frontend
