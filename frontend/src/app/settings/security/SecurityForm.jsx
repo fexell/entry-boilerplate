@@ -121,7 +121,7 @@ const SecuritySettingsPage = () => {
         </h2>
 
         {twoFactorMessage && (
-          <div className="flex items-start gap-3 bg-(--primary-color-10) border border-(--primary-color-20) rounded-lg px-4 py-3.5 mb-5 max-w-md">
+          <div className="flex items-start gap-3 bg-(--primary-color)/10 border border-(--primary-color)/20 rounded-lg px-4 py-3.5 mb-5 max-w-md">
             <CircleCheck className="w-4 h-4 text-(--primary-color) mt-0.5 shrink-0" />
             <p className="text-sm text-amber-300">{twoFactorMessage}</p>
           </div>
@@ -177,7 +177,7 @@ const SecuritySettingsPage = () => {
         </h2>
 
         {passwordSaved && (
-          <div className="flex items-start gap-3 bg-() border border-(--primary-color-20) rounded-lg px-4 py-3.5 mb-5 max-w-md">
+          <div className="flex items-start gap-3 bg-() border border-(--primary-color)/20 rounded-lg px-4 py-3.5 mb-5 max-w-md">
             <CircleCheck className="w-4 h-4 text-(--primary-color) mt-0.5 shrink-0" />
             <p className="text-sm text-amber-300">Password updated successfully.</p>
           </div>
