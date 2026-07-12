@@ -151,7 +151,18 @@ namespace Entry.Auth.Services
 
     public async Task<AuthResultDto> RefreshAsync(string refreshToken)
     {
-      var result = await _refreshTokenService.RotateRefreshTokenAsync(refreshToken, expectedUserId: null);
+      TokenRotationResultDto? result;
+
+      try
+      {
+        result = await _refreshTokenService.RotateRefreshTokenAsync(refreshToken, expectedUserId: null);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Unexpected error during refresh token rotation.");
+        return Fail("Something went wrong. Please try logging in again.");
+      }
+
       if (result == null)
       {
         _logger.LogWarning("Invalid or expired refresh token.");
@@ -183,7 +194,18 @@ namespace Entry.Auth.Services
 
     public async Task<AuthResultDto> SilentRefreshAsync(AppUser user, string refreshToken)
     {
-      var pair = await _refreshTokenService.RefreshTokenAsync(refreshToken);
+      TokenPair? pair;
+
+      try
+      {
+        pair = await _refreshTokenService.RefreshTokenAsync(refreshToken);
+      }
+      catch (Exception ex)
+      {
+        _logger.LogError(ex, "Unexpected error during silent refresh. UserId: {UserId}", user.Id);
+        return Fail("Something went wrong. Please try logging in again.");
+      }
+
       if (pair == null)
       {
         _logger.LogWarning("Invalid or expired refresh token during silent refresh. UserId: {UserId}", user.Id);

@@ -6,6 +6,7 @@ import { Lock, ShieldCheck, CircleAlert, CircleCheck, Eye, EyeOff } from "lucide
 import TwoFactorSetupModal from "@/components/Auth/TwoFactorSetupModal"
 import DisableTwoFactorModal from "@/components/Auth/DisableTwoFactorModal"
 import RegenerateRecoveryCodesModal from "@/components/Auth/RegenerateRecoveryCodesModal"
+import TextField from "@/components/UI/TextField"
 
 import api from "@/lib/api"
 import useAuthStore from "@/store/useAuthStore"
@@ -194,110 +195,42 @@ const SecuritySettingsPage = () => {
         )}
 
         <form onSubmit={handlePasswordSubmit} className="space-y-5 max-w-md">
-          <div>
-            <label
-              htmlFor="currentPassword"
-              className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-            >
-              Current password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-              <input
-                id="currentPassword"
-                type={showPasswords ? "text" : "password"}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-                value={passwordData.currentPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, currentPassword: e.target.value })
-                }
-              />
-              <button
-                type="button"
-                onClick={toggleVisibility}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-300 transition-colors"
-                aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
-              >
-                {showPasswords ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-          </div>
+          <TextField
+            id="currentPassword"
+            label="Current password"
+            icon={Lock}
+            type="password"
+            value={passwordData.currentPassword}
+            onChange={(e) =>
+              setPasswordData({ ...passwordData, currentPassword: e.target.value })
+            }
+            placeholder="••••••••"
+            autoComplete="current-password"
+          />
 
-          <div>
-            <label
-              htmlFor="newPassword"
-              className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-            >
-              New password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-              <input
-                id="newPassword"
-                type={showPasswords ? "text" : "password"}
-                placeholder="••••••••"
-                autoComplete="new-password"
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-                value={passwordData.newPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, newPassword: e.target.value })
-                }
-              />
-              <button
-                type="button"
-                onClick={toggleVisibility}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-300 transition-colors"
-                aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
-              >
-                {showPasswords ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-          </div>
+          <TextField
+            id="newPassword"
+            label="New password"
+            icon={Lock}
+            type="password"
+            value={passwordData.newPassword}
+            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+            placeholder="••••••••"
+            autoComplete="new-password"
+          />
 
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-            >
-              Confirm new password
-            </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-              <input
-                id="confirmPassword"
-                type={showPasswords ? "text" : "password"}
-                placeholder="••••••••"
-                autoComplete="new-password"
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-                value={passwordData.confirmPassword}
-                onChange={(e) =>
-                  setPasswordData({ ...passwordData, confirmPassword: e.target.value })
-                }
-              />
-              <button
-                type="button"
-                onClick={toggleVisibility}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-300 transition-colors"
-                aria-label={showPasswords ? "Hide passwords" : "Show passwords"}
-              >
-                {showPasswords ? (
-                  <EyeOff className="w-4 h-4" />
-                ) : (
-                  <Eye className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-          </div>
+          <TextField
+            id="confirmPassword"
+            label="Confirm new password"
+            icon={Lock}
+            type="password"
+            value={passwordData.confirmPassword}
+            onChange={(e) =>
+              setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+            }
+            placeholder="••••••••"
+            autoComplete="new-password-confirm"
+          />
 
           <div className="flex items-center gap-3 pt-1">
             <button

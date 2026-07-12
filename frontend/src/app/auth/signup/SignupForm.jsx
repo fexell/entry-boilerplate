@@ -3,6 +3,9 @@
 import { useState } from "react"
 import Link from "next/link"
 import { Mail, User, Lock, Eye, EyeOff, ArrowRight, CircleAlert, CircleCheck } from "lucide-react"
+
+import TextField from "@/components/UI/TextField"
+
 import api from "@/lib/api"
 
 const SignupForm = () => {
@@ -80,74 +83,41 @@ const SignupForm = () => {
 
             <form className="space-y-5" onSubmit={handleSubmit}>
               {/* Email */}
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-                >
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-              </div>
+              <TextField
+                id="email"
+                type="email"
+                icon={Mail}
+                placeholder="you@example.com"
+                label="Email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                autoComplete="email"
+              />
 
               {/* Username */}
-              <div>
-                <label
-                  htmlFor="username"
-                  className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-                >
-                  Username
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-                  <input
-                    id="username"
-                    type="text"
-                    placeholder="johndoe"
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  />
-                </div>
-              </div>
+              <TextField
+                id="username"
+                type="text"
+                icon={User}
+                placeholder="johndoe"
+                label="Username"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                autoComplete="username"
+              />
 
               {/* Password */}
               <div>
-                <label
-                  htmlFor="password"
-                  className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-                >
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-neutral-300 transition-colors"
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+                <TextField
+                  id="password"
+                  type="password"
+                  icon={Lock}
+                  placeholder="••••••••"
+                  label="Password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  autoComplete="password"
+                />
                 <p className="mt-3 text-xs text-neutral-600">
                   At least 12 characters, one uppercase letter, one lowercase letter, one number, and one special character.
                 </p>

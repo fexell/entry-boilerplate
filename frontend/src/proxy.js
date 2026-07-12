@@ -16,10 +16,10 @@ export function proxy(request) {
   const hasSession = request.cookies.has("refreshToken")
 
   if(!hasSession) {
-    const loginUrl = new URL("/auth/login", request.url)
-    loginUrl.searchParams.set("from", pathname)
+    const redirectTo = new URL("/auth/protected", request.url)
+    redirectTo.searchParams.set("from", pathname)
 
-    return NextResponse.redirect(loginUrl)
+    return NextResponse.redirect(redirectTo)
   }
 
   return NextResponse.next()

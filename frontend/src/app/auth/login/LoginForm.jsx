@@ -8,6 +8,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, CircleAlert, KeyRound } from "luci
 import api from "@/lib/api"
 import useAuthStore from "@/store/useAuthStore"
 import { getDeviceFingerprint } from "@/components/Utils/DeviceFingerprint"
+import TextField from "@/components/UI/TextField"
 
 const REMEMBERED_EMAIL_KEY = "email"
 
@@ -254,26 +255,16 @@ const LoginForm = () => {
         )}
 
         <form className="space-y-5" onSubmit={handleSubmit}>
-          <div>
-            <label
-              htmlFor="email"
-              className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-            >
-              Email
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-              <input
-                id="email"
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-                value={formData.email}
-                onChange={handleEmailChange}
-              />
-            </div>
-          </div>
+          <TextField
+            id="email"
+            label="Email"
+            icon={Mail}
+            type="email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            value={formData.email}
+            onChange={handleEmailChange}
+          />
 
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -354,7 +345,7 @@ const LoginForm = () => {
           Don&apos;t have an account?{" "}
           <Link
             href="/auth/signup"
-            className="text-neutral-200 hover:text-amber-400 transition-colors underline underline-offset-4 decoration-neutral-700"
+            className="text-neutral-200 hover:text-(--primary-color) transition-colors underline underline-offset-4 decoration-neutral-700"
           >
             Sign up
           </Link>

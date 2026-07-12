@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
-import { User, ShieldCheck, Monitor, ArrowLeft, TriangleAlert, LogOut } from "lucide-react"
+import { User, ShieldCheck, Monitor, ArrowLeft, TriangleAlert } from "lucide-react"
 
 import LogoutButton from "@/components/Utils/LogoutButton"
 
@@ -21,26 +21,21 @@ const SettingsLayout = ({ children }) => {
   const pathname = usePathname()
   const router = useRouter()
   const [backHref, setBackHref] = useState("/")
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const { isAuthenticated, isInitialized, logout } = useAuthStore()
+  const { isAuthenticated, isInitialized, isLoggingOut } = useAuthStore()
 
   useEffect(() => {
     setBackHref(getBackHref(pathname))
-  }, [])
+  }, [pathname])
 
-  const handleLogout = async () => {
-    if (isLoggingOut) return
-    setIsLoggingOut(true)
-    try {
-      await logout()
-      router.push("/?from=logout&loggedOut=true")
-    } catch (err) {
-      console.error("Logout failed:", err)
-      setIsLoggingOut(false)
+  useEffect(() => {
+    if (isInitialized && !isAuthenticated && !isLoggingOut) {
+      router.push("/auth/protected?from=guard")
     }
-  }
+  }, [isAuthenticated, isInitialized, isLoggingOut, router])
 
-  if(!isInitialized || !isAuthenticated) return null
+  if(!isInitialized) return null
+
+  if(!isAuthenticated && isLoggingOut) return null
 
   return (
     <div className="min-h-screen bg-neutral-950">
@@ -48,7 +43,7 @@ const SettingsLayout = ({ children }) => {
         <div className="flex items-center justify-between mb-10">
           <div className="flex items-center gap-2 font-mono text-xs tracking-widest text-neutral-500">
             <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
-            {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()} — ACCOUNT SETTINGS
+            {(process.env.NEXT_PUBLIC_APP_NAME ?? "ENTRY").toUpperCase()} — ACCOUNT SETTINGS
           </div>
 
           <Link

@@ -4,6 +4,8 @@ import { useState } from "react"
 import Link from "next/link"
 import { Mail, ArrowRight, CircleAlert, CircleCheck } from "lucide-react"
 
+import TextField from "@/components/UI/TextField"
+
 import api from "@/lib/api"
 
 const ForgotPasswordForm = () => {
@@ -74,26 +76,16 @@ const ForgotPasswordForm = () => {
             )}
 
             <form className="space-y-5" onSubmit={handleSubmit}>
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-                >
-                  Email
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-              </div>
+              <TextField
+                id="email"
+                label="Email"
+                icon={Mail}
+                type="email"
+                placeholder="you@example.com"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
 
               <button
                 type="submit"

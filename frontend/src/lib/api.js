@@ -141,7 +141,7 @@ const api = async (path, options = {}) => {
 
     sessionExpired = true
 
-    if (!silent) toast.error("Din session har gått ut. Logga in igen.")
+    if (!silent) toast.error("Your session has expired. Please log in again.")
 
     window.dispatchEvent(new Event("auth:expired"))
   }

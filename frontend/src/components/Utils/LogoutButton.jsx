@@ -1,31 +1,18 @@
 "use client"
 
-import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
 
-import api from "@/lib/api"
 import useAuthStore from "@/store/useAuthStore"
 
 const LogoutButtonComponent = ({ className = "" }) => {
   const router = useRouter()
-  const clearUser = useAuthStore((state) => state.clearUser)
-  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const logout = useAuthStore((s) => s.logout)
+  const isLoggingOut = useAuthStore((s) => s.isLoggingOut)
 
   const handleLogout = async () => {
-    setIsLoggingOut(true)
-
-    try {
-      await api("/auth/logout", { method: "POST" })
-    } catch (err) {
-      // Även om requesten failar (t.ex. token redan ogiltig) vill vi
-      // fortfarande rensa lokalt state och skicka användaren till login.
-      console.error("Logout request failed:", err)
-    } finally {
-      clearUser()
-      setIsLoggingOut(false)
-      router.push("/auth/logged-out?from=logout")
-    }
+    await logout()
+    router.push("/auth/logged-out?from=logout")
   }
 
   return (

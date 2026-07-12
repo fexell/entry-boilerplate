@@ -48,10 +48,19 @@ namespace Entry.Auth.Data
 
         entity.HasIndex(x => x.Token).IsUnique();
         entity.HasIndex(x => x.UserId);
+        entity.HasIndex(x => x.ReplacedByTokenId);
 
         entity.HasOne(x => x.User)
               .WithMany(u => u.RefreshTokens)
               .HasForeignKey(x => x.UserId)
+              .OnDelete(DeleteBehavior.Restrict);
+
+        // Self-referencing: points at the token this one was rotated into.
+        // Restrict (not Cascade) - this table already restricts from User,
+        // and EF Core disallows multiple cascade paths anyway.
+        entity.HasOne<RefreshToken>()
+              .WithMany()
+              .HasForeignKey(x => x.ReplacedByTokenId)
               .OnDelete(DeleteBehavior.Restrict);
       });
 
@@ -100,7 +109,10 @@ namespace Entry.Auth.Data
         entity.Property(x => x.IpAddress).HasMaxLength(64);
         entity.Property(x => x.Country).HasMaxLength(64);
         entity.Property(x => x.DeviceFingerprint).HasMaxLength(256);
-        entity.Property(x => x.RiskLevel).HasMaxLength(32);
+
+        entity.Property(x => x.RiskLevel)
+          .HasConversion<string>()
+          .HasMaxLength(16);
 
         entity.HasIndex(x => x.UserId);
         entity.HasIndex(x => x.IpAddress);
@@ -112,10 +124,6 @@ namespace Entry.Auth.Data
               .WithMany()
               .HasForeignKey(x => x.UserId)
               .OnDelete(DeleteBehavior.SetNull);
-
-        entity.Property(x => x.RiskLevel)
-          .HasConversion<string>()
-          .HasMaxLength(16);
       });
     }
   }

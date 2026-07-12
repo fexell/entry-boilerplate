@@ -20,6 +20,13 @@ namespace Entry.Auth.Services
 
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
 
+    // If a revoked token gets reused within this window, treat it as a
+    // race between concurrent requests rather than theft. Long enough to
+    // absorb double network round-trips (dev StrictMode double-effects,
+    // near-simultaneous tabs), short enough that real replay attacks
+    // after this window still trigger full revocation.
+    private static readonly TimeSpan ReuseGracePeriod = TimeSpan.FromSeconds(10);
+
     public RefreshTokenService(
       AppDbContext db,
       IJwtService jwtService,
@@ -101,54 +108,65 @@ namespace Entry.Auth.Services
 
     public async Task<TokenPair?> RefreshTokenAsync(string refreshToken)
     {
-      await using var transaction = await _db.Database.BeginTransactionAsync();
+      var strategy = _db.Database.CreateExecutionStrategy();
 
-      try
+      return await strategy.ExecuteAsync(async () =>
       {
-        var token = await _db.RefreshTokens
-          .Include(x => x.Session)
-          .FirstOrDefaultAsync(x => x.Token == refreshToken);
+        await using var transaction = await _db.Database.BeginTransactionAsync();
 
-        if (token == null || token.Revoked || token.ExpiresAt < DateTime.UtcNow)
+        try
         {
-          await transaction.RollbackAsync();
-          return null;
+          var token = await _db.RefreshTokens
+            .Include(x => x.Session)
+            .FirstOrDefaultAsync(x => x.Token == refreshToken);
+
+          if (token == null || token.Revoked || token.ExpiresAt < DateTime.UtcNow)
+          {
+            await transaction.RollbackAsync();
+            return null;
+          }
+
+          if (token.Session?.RevokedAt is not null)
+          {
+            await transaction.RollbackAsync();
+            return null;
+          }
+
+          var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == token.UserId);
+          if (user == null)
+          {
+            await transaction.RollbackAsync();
+            return null;
+          }
+
+          token.Revoked = true;
+
+          var newRefresh = await CreateRefreshTokenAsync(user.Id, token.SessionId);
+          var jwt = _jwtService.GenerateToken(user, newRefresh.SessionId);
+
+          await _db.SaveChangesAsync();
+          await transaction.CommitAsync();
+
+          return new TokenPair
+          {
+            AccessToken = jwt.Token,
+            RefreshToken = newRefresh.Token,
+            ExpiresInSeconds = jwt.ExpiresInSeconds
+          };
         }
-
-        if (token.Session?.RevokedAt is not null)
+        catch (Exception ex)
         {
+          _logger.LogError(ex, "Error during silent refresh.");
           await transaction.RollbackAsync();
-          return null;
+
+          // Rethrow (rather than swallow to null) so the execution strategy
+          // can actually see transient failures and retry them - catching
+          // everything here meant EnableRetryOnFailure never got a chance
+          // to do its job. AuthService converts this into a clean Fail()
+          // response, so callers still see a normal 400, not a 500.
+          throw;
         }
-
-        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == token.UserId);
-        if (user == null)
-        {
-          await transaction.RollbackAsync();
-          return null;
-        }
-
-        token.Revoked = true;
-
-        var newRefresh = await CreateRefreshTokenAsync(user.Id, token.SessionId);
-        var jwt = _jwtService.GenerateToken(user, newRefresh.SessionId);
-
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return new TokenPair
-        {
-          AccessToken = jwt.Token,
-          RefreshToken = newRefresh.Token,
-          ExpiresInSeconds = jwt.ExpiresInSeconds
-        };
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error during silent refresh.");
-        await transaction.RollbackAsync();
-        return null;
-      }
+      });
     }
 
     // ------------------------------------------------------
@@ -157,101 +175,152 @@ namespace Entry.Auth.Services
 
     public async Task<TokenRotationResultDto?> RotateRefreshTokenAsync(string refreshToken, string? expectedUserId)
     {
-      await using var transaction = await _db.Database.BeginTransactionAsync();
+      var strategy = _db.Database.CreateExecutionStrategy();
 
-      try
+      return await strategy.ExecuteAsync(async () =>
       {
-        var existing = await _db.RefreshTokens
-          .FromSqlInterpolated($@"
-            SELECT * FROM RefreshTokens WITH (UPDLOCK, ROWLOCK)
-            WHERE Token = {refreshToken}")
-          .Include(x => x.Session)
-          .FirstOrDefaultAsync();
+        await using var transaction = await _db.Database.BeginTransactionAsync();
 
-        if (existing == null)
+        try
         {
-          _logger.LogWarning("Refresh token not found: {TokenPrefix}", refreshToken[..Math.Min(8, refreshToken.Length)]);
+          var existing = await _db.RefreshTokens
+            .FromSqlInterpolated($@"
+              SELECT * FROM RefreshTokens WITH (UPDLOCK, ROWLOCK)
+              WHERE Token = {refreshToken}")
+            .Include(x => x.Session)
+            .FirstOrDefaultAsync();
 
-          await transaction.RollbackAsync();
-          return null;
-        }
+          if (existing == null)
+          {
+            _logger.LogWarning("Refresh token not found: {TokenPrefix}", refreshToken[..Math.Min(8, refreshToken.Length)]);
 
-        if (existing.Revoked)
-        {
-          _logger.LogWarning("Attempted reuse of revoked refresh token. UserId: {UserId}", existing.UserId);
+            await transaction.RollbackAsync();
+            return null;
+          }
 
-          await RevokeAllUserTokensAsync(existing.UserId);
+          if (existing.Revoked)
+          {
+            if (existing.RevokedAt is not null
+              && DateTime.UtcNow - existing.RevokedAt.Value < ReuseGracePeriod
+              && existing.ReplacedByTokenId is not null)
+            {
+              var successor = await _db.RefreshTokens
+                .FirstOrDefaultAsync(x => x.Id == existing.ReplacedByTokenId.Value);
+
+              if (successor is not null && !successor.Revoked && successor.ExpiresAt > DateTime.UtcNow)
+              {
+                _logger.LogInformation(
+                  "Refresh token reused within grace period ({GraceMs}ms) - treating as a request race, not theft. UserId: {UserId}",
+                  (DateTime.UtcNow - existing.RevokedAt.Value).TotalMilliseconds, existing.UserId);
+
+                var raceUser = await _userManager.FindByIdAsync(existing.UserId);
+                if (raceUser == null)
+                {
+                  await transaction.RollbackAsync();
+                  return null;
+                }
+
+                var raceJwt = _jwtService.GenerateToken(raceUser, successor.SessionId);
+
+                // Nothing was written on this path - just release the row lock.
+                await transaction.CommitAsync();
+
+                return new TokenRotationResultDto
+                {
+                  AccessToken = raceJwt.Token,
+                  RefreshToken = successor.Token,
+                  ExpiresInSeconds = raceJwt.ExpiresInSeconds,
+                  UserId = existing.UserId
+                };
+              }
+            }
+
+            _logger.LogWarning("Attempted reuse of revoked refresh token. UserId: {UserId}", existing.UserId);
+
+            await RevokeAllUserTokensAsync(existing.UserId);
+            await transaction.CommitAsync();
+            return null;
+          }
+
+          if (existing.ExpiresAt < DateTime.UtcNow)
+          {
+            _logger.LogWarning("Expired refresh token used. UserId: {UserId}", existing.UserId);
+
+            await transaction.RollbackAsync();
+            return null;
+          }
+
+          if (expectedUserId != null && existing.UserId != expectedUserId)
+          {
+            _logger.LogWarning("Refresh token user mismatch. Expected: {Expected}, Actual: {Actual}", expectedUserId, existing.UserId);
+
+            await transaction.RollbackAsync();
+            return null;
+          }
+
+          existing.Revoked = true;
+          existing.RevokedAt = DateTime.UtcNow;
+
+          var session = existing.Session
+            ?? await _db.UserSessions.FirstOrDefaultAsync(s => s.Id == existing.SessionId);
+
+          if (session != null)
+          {
+            session.LastUsedAt = DateTime.UtcNow;
+          }
+
+          var newRefreshTokenValue = GenerateSecureToken();
+          var newRefreshToken = new RefreshToken
+          {
+            Token = newRefreshTokenValue,
+            UserId = existing.UserId,
+            SessionId = existing.SessionId,
+            ExpiresAt = DateTime.UtcNow.Add(RefreshTokenLifetime),
+            CreatedAt = DateTime.UtcNow,
+          };
+
+          _db.RefreshTokens.Add(newRefreshToken);
+
+          var user = await _userManager.FindByIdAsync(existing.UserId);
+          if (user == null)
+          {
+            _logger.LogError("User not found during token rotation. UserId: {UserId}", existing.UserId);
+
+            await transaction.RollbackAsync();
+            return null;
+          }
+
+          var jwt = _jwtService.GenerateToken(user, newRefreshToken.SessionId);
+
+          // First save assigns newRefreshToken.Id (identity column) - only
+          // then can we point existing.ReplacedByTokenId at it.
+          await _db.SaveChangesAsync();
+
+          existing.ReplacedByTokenId = newRefreshToken.Id;
+          await _db.SaveChangesAsync();
+
           await transaction.CommitAsync();
-          return null;
-        }
 
-        if (existing.ExpiresAt < DateTime.UtcNow)
+          return new TokenRotationResultDto
+          {
+            AccessToken = jwt.Token,
+            RefreshToken = newRefreshTokenValue,
+            ExpiresInSeconds = jwt.ExpiresInSeconds,
+            UserId = existing.UserId
+          };
+        }
+        catch (Exception ex)
         {
-          _logger.LogWarning("Expired refresh token used. UserId: {UserId}", existing.UserId);
+          _logger.LogError(ex, "Error during refresh token rotation.");
 
           await transaction.RollbackAsync();
-          return null;
+
+          // See comment in RefreshTokenAsync above - rethrow so transient
+          // DB errors can actually be retried instead of being reported
+          // as "invalid token".
+          throw;
         }
-
-        if (expectedUserId != null && existing.UserId != expectedUserId)
-        {
-          _logger.LogWarning("Refresh token user mismatch. Expected: {Expected}, Actual: {Actual}", expectedUserId, existing.UserId);
-
-          await transaction.RollbackAsync();
-          return null;
-        }
-
-        existing.Revoked = true;
-
-        var session = existing.Session
-          ?? await _db.UserSessions.FirstOrDefaultAsync(s => s.Id == existing.SessionId);
-
-        if (session != null)
-        {
-          session.LastUsedAt = DateTime.UtcNow;
-        }
-
-        var newRefreshTokenValue = GenerateSecureToken();
-        var newRefreshToken = new RefreshToken
-        {
-          Token = newRefreshTokenValue,
-          UserId = existing.UserId,
-          SessionId = existing.SessionId,
-          ExpiresAt = DateTime.UtcNow.Add(RefreshTokenLifetime),
-          CreatedAt = DateTime.UtcNow,
-        };
-
-        _db.RefreshTokens.Add(newRefreshToken);
-
-        var user = await _userManager.FindByIdAsync(existing.UserId);
-        if (user == null)
-        {
-          _logger.LogError("User not found during token rotation. UserId: {UserId}", existing.UserId);
-
-          await transaction.RollbackAsync();
-          return null;
-        }
-
-        var jwt = _jwtService.GenerateToken(user, newRefreshToken.SessionId);
-
-        await _db.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        return new TokenRotationResultDto
-        {
-          AccessToken = jwt.Token,
-          RefreshToken = newRefreshTokenValue,
-          ExpiresInSeconds = jwt.ExpiresInSeconds,
-          UserId = existing.UserId
-        };
-      }
-      catch (Exception ex)
-      {
-        _logger.LogError(ex, "Error during refresh token rotation.");
-
-        await transaction.RollbackAsync();
-        return null;
-      }
+      });
     }
 
     // ------------------------------------------------------

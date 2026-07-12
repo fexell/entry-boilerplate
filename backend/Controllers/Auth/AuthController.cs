@@ -21,7 +21,7 @@ namespace Entry.Auth.Controllers
     // Duplicated across Login/VerifyTwoFactorLogin/Refresh before - single
     // source now. Consider moving to CookieHelper or config if other
     // controllers ever need the same lifetimes.
-    private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromHours(1);
+    private static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(30);
 
     private readonly IAuthService _authService;
@@ -206,7 +206,7 @@ namespace Entry.Auth.Controllers
       }
 
       var requiresTwoFactor = result.RequiresTwoFactor
-        || risk.RiskLevel == RiskLevel.High
+        || risk!.RiskLevel == RiskLevel.High
         || (risk.RiskLevel == RiskLevel.Medium && user!.TwoFactorEnabled);
 
       // -----------------------------
@@ -217,7 +217,7 @@ namespace Entry.Auth.Controllers
         return Ok(new
         {
           requiresTwoFactor = true,
-          reason = risk.RiskLevel == RiskLevel.High ? "suspicious_login"
+          reason = risk!.RiskLevel == RiskLevel.High ? "suspicious_login"
             : risk.RiskLevel == RiskLevel.Medium ? "medium_risk"
             : (string?)null,
           twoFactorToken = result.TwoFactorToken
@@ -235,7 +235,7 @@ namespace Entry.Auth.Controllers
       // -----------------------------
 
       user!.LastKnownIp = ip;
-      user.LastKnownCountry = risk.Country;
+      user.LastKnownCountry = risk!.Country;
       user.LastKnownDeviceFingerprint = deviceFingerprint;
 
       await _userService.UpdateAsync(user);

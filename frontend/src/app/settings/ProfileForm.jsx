@@ -5,6 +5,7 @@ import { User, Mail, CircleCheck, CircleAlert } from "lucide-react"
 
 import api from "@/lib/api"
 import useAuthStore from "@/store/useAuthStore"
+import TextField from "@/components/UI/TextField"
 import ConfirmPasswordModal from "@/components/Utils/ConfirmPasswordModal"
 
 const BIO_MAX_LENGTH = 160
@@ -45,7 +46,8 @@ const NameSection = () => {
 
   const isSubmitDisabled =
     isSubmitting ||
-    (formData.firstName === user?.firstName && formData.lastName === user?.lastName)
+    (formData.firstName === user?.firstName && formData.lastName === user?.lastName) ||
+    (RegExp(/\s/).test(formData.firstName) || RegExp(/\s/).test(formData.lastName))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -73,44 +75,24 @@ const NameSection = () => {
 
       <form onSubmit={handleSubmit} className="space-y-5 max-w-md">
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label
-              htmlFor="firstName"
-              className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-            >
-              First name
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-              <input
-                id="firstName"
-                type="text"
-                placeholder="First name"
-                autoComplete="given-name"
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              />
-            </div>
-          </div>
+          <TextField
+            id="firstName"
+            label="First name"
+            icon={User}
+            value={formData.firstName}
+            onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+            placeholder="First name"
+            autoComplete="given-name"
+          />
 
-          <div>
-            <label
-              htmlFor="lastName"
-              className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-            >
-              Last name
-            </label>
-            <input
-              id="lastName"
-              type="text"
-              placeholder="Last name"
-              autoComplete="family-name"
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-              value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-            />
-          </div>
+          <TextField
+            id="lastName"
+            label="Last name"
+            value={formData.lastName}
+            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+            placeholder="Last name"
+            autoComplete="family-name"
+          />
         </div>
 
         <div className="flex items-center gap-3 pt-1">
@@ -205,6 +187,8 @@ const BioSection = () => {
             className="w-full resize-none bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
             value={bio}
             onChange={handleChange}
+            aria-label="bio"
+            title={`Your bio (${bio.length} / ${BIO_MAX_LENGTH})`}
           />
         </div>
 
@@ -276,26 +260,15 @@ const EmailSection = () => {
       </p>
 
       <form onSubmit={handleOpenModal} className="space-y-5 max-w-md">
-        <div>
-          <label
-            htmlFor="newEmail"
-            className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-          >
-            New email
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-600" />
-            <input
-              id="newEmail"
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-            />
-          </div>
-        </div>
+        <TextField
+          id="newEmail"
+          label="New email"
+          icon={Mail}
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+          placeholder="you@example.com"
+          autoComplete="email"
+        />
 
         <button
           type="submit"
