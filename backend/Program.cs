@@ -4,18 +4,13 @@ using Microsoft.Extensions.Options;
 using System.Globalization;
 using System.Net;
 using System.Threading.RateLimiting;
-using System.IdentityModel.Tokens.Jwt;
 
 using Entry.Auth.Extensions;
-using Entry.Auth.Services;
 using Entry.Auth.Filters;
 using Entry.Auth.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 var supportedCultures = new[] { "en", "sv" };
-
-// Inactivate claim mapping for ALL JwtSecurityTokenHandler instances
-JwtSecurityTokenHandler.DefaultMapInboundClaims = false;
 
 // -----------------------------------------------------
 // CORS
