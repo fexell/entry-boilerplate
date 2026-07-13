@@ -30,7 +30,7 @@ const formatRelativeTime = (isoString) => {
   })
 }
 
-const SessionsSettingsPage = () => {
+export default function SessionsForm() {
   const [sessions, setSessions] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -141,5 +141,3 @@ const SessionsSettingsPage = () => {
     </div>
   )
 }
-
-export default SessionsSettingsPage

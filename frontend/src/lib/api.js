@@ -85,7 +85,7 @@ const invalidateCsrfToken = () => {
   csrfTokenPromise = null
 }
 
-const api = async (path, options = {}) => {
+export default async function api(path, options = {}) {
   const { skipAuthRetry, skipCsrfRetry, silent, ...fetchOptions } = options
 
   const method = (fetchOptions.method || "GET").toUpperCase()
@@ -195,5 +195,3 @@ const api = async (path, options = {}) => {
 
   return data
 }
-
-export default api

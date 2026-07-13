@@ -8,7 +8,7 @@ import TextField from "@/components/UI/TextField"
 
 import api from "@/lib/api"
 
-const ForgotPasswordForm = () => {
+export default function ForgotPasswordForm() {
   const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState([])
@@ -37,13 +37,13 @@ const ForgotPasswordForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
+    <div className="flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Eyebrow / brand mark */}
-        <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
+        {/* <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
           <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
           {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()}
-        </div>
+        </div> */}
 
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-neutral-100">
@@ -112,5 +112,3 @@ const ForgotPasswordForm = () => {
     </div>
   )
 }
-
-export default ForgotPasswordForm

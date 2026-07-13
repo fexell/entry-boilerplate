@@ -2,7 +2,7 @@
 
 import { CircleAlert } from "lucide-react"
 
-const FormError = ({ message }) => {
+export default function FormError({ message }) {
   if (!message) return null
 
   return (
@@ -12,5 +12,3 @@ const FormError = ({ message }) => {
     </div>
   )
 }
-
-export default FormError

@@ -3,14 +3,17 @@
 import { useState } from "react"
 import { User, Mail, CircleCheck, CircleAlert } from "lucide-react"
 
-import api from "@/lib/api"
-import useAuthStore from "@/store/useAuthStore"
 import TextField from "@/components/UI/TextField"
+import TextAreaField from "@/components/UI/TextAreaField"
 import ConfirmPasswordModal from "@/components/Utils/ConfirmPasswordModal"
+
+import useAuthStore from "@/store/useAuthStore"
+
+import api from "@/lib/api"
 
 const BIO_MAX_LENGTH = 160
 
-const ProfileForm = () => {
+export default function ProfileForm() {
   const user = useAuthStore((state) => state.user)
 
   return (
@@ -172,25 +175,16 @@ const BioSection = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-2 max-w-md">
-        <div>
-          <label
-            htmlFor="bio"
-            className="block font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-2"
-          >
-            About you
-          </label>
-          <textarea
-            id="bio"
-            rows={3}
-            placeholder="Tell people a little about yourself"
-            maxLength={BIO_MAX_LENGTH}
-            className="w-full resize-none bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
-            value={bio}
-            onChange={handleChange}
-            aria-label="bio"
-            title={`Your bio (${bio.length} / ${BIO_MAX_LENGTH})`}
-          />
-        </div>
+        <TextAreaField
+          id="bio"
+          rows={3}
+          label="About you"
+          maxLength={BIO_MAX_LENGTH}
+          value={bio}
+          onChange={handleChange}
+          placeholder="Tell people a little about yourself"
+          title={`Your bio (${bio.length} / ${BIO_MAX_LENGTH})`}
+        />
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -292,5 +286,3 @@ const EmailSection = () => {
     </section>
   )
 }
-
-export default ProfileForm

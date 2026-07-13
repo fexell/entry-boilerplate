@@ -4,7 +4,7 @@ import { useEffect } from "react"
 import api from "@/lib/api"
 import useAuthStore from "@/store/useAuthStore"
 
-const AuthProvider = ({ children }) => {
+export default function AuthProvider({ children }) {
   const { setUser, clearUser } = useAuthStore()
 
   useEffect(() => {
@@ -28,5 +28,3 @@ const AuthProvider = ({ children }) => {
 
   return children
 }
-
-export default AuthProvider

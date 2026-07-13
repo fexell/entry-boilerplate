@@ -3,15 +3,13 @@
 import ResendVerificationForm from "./ResendVerificationForm"
 
 export const metadata = {
-  title: "Resend Verification | " + process.env.NEXT_PUBLIC_APP_NAME,
+  title: "Resend Verification | " + (process.env.NEXT_PUBLIC_APP_NAME ?? "ENTRY"),
 }
 
-const ResendVerificationPage = () => {
+export default function ResendVerificationPage() {
   return (
     <>
       <ResendVerificationForm />
     </>
   );
 }
-
-export default ResendVerificationPage

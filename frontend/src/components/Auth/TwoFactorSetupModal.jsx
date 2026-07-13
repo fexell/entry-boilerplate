@@ -13,7 +13,7 @@ import api from "@/lib/api"
 // This one keeps its own step logic (loading/scan/error/recovery) because each step's
 // content is genuinely different - but it still uses the same Modal shell and the same
 // CodeInputField / FormError / RecoveryCodesGrid pieces as the other 2FA modals.
-const TwoFactorSetupModal = ({ isOpen, onClose, onEnabled }) => {
+export default function TwoFactorSetupModal({ isOpen, onClose, onEnabled }) {
   const [step, setStep] = useState("loading") // loading | scan | recovery | error
   const [setupInfo, setSetupInfo] = useState(null)
   const [code, setCode] = useState("")
@@ -161,5 +161,3 @@ const TwoFactorSetupModal = ({ isOpen, onClose, onEnabled }) => {
     </Modal>
   )
 }
-
-export default TwoFactorSetupModal

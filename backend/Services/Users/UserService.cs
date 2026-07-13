@@ -161,8 +161,6 @@ namespace Entry.Auth.Services
 
     public async Task<UserMeDto> GetUserMeAsync(AppUser user)
     {
-      Console.WriteLine(user.Bio);
-
       return new UserMeDto
       {
         Id = user.Id,

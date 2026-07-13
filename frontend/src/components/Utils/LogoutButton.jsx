@@ -5,7 +5,7 @@ import { LogOut } from "lucide-react"
 
 import useAuthStore from "@/store/useAuthStore"
 
-const LogoutButtonComponent = ({ className = "" }) => {
+export default function LogoutButtonComponent({ className = "" }) {
   const router = useRouter()
   const logout = useAuthStore((s) => s.logout)
   const isLoggingOut = useAuthStore((s) => s.isLoggingOut)
@@ -27,5 +27,3 @@ const LogoutButtonComponent = ({ className = "" }) => {
     </button>
   )
 }
-
-export default LogoutButtonComponent

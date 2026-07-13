@@ -17,7 +17,7 @@ const navItems = [
   { href: "/settings/danger", label: "Danger Zone", icon: TriangleAlert },
 ]
 
-const SettingsLayout = ({ children }) => {
+export default function SettingsLayout({ children }) {
   const pathname = usePathname()
   const router = useRouter()
   const [backHref, setBackHref] = useState("/")
@@ -93,5 +93,3 @@ const SettingsLayout = ({ children }) => {
     </div>
   )
 }
-
-export default SettingsLayout

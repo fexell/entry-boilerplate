@@ -1,40 +1,52 @@
 "use client"
 
 import { useEffect } from "react"
+import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 
 import useAuthStore from '@/store/useAuthStore'
 
-const AuthLayout = ({ children }) => {
+export default function AuthLayout({ children }) {
   const router = useRouter()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  const isLoading = useAuthStore((state) => state.isLoading)
+  const isInitialized = useAuthStore((state) => state.isInitialized)
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isInitialized && isAuthenticated) {
       router.push("/")
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, isInitialized])
 
-  if(isLoading) return null
+  if(!isInitialized) return null
+  if(isAuthenticated) return null
 
   return (
     <>
       <div
-        className="auth flex flex-col items-center justify-center min-h-screen max-h-screen bg-neutral-950">
+        className="auth flex flex-col items-center justify-center min-h-screen bg-neutral-950">
         <Link
           href="/"
-          className="absolute top-4 left-4 flex w-12 h-12 rounded-full justify-center items-center gap-2 tracking-widest text-neutral-950 bg-(--primary-color) hover:bg-(--primary-color-hover)/80">
+          className="absolute top-4 left-4 flex w-8 h-8 rounded-full justify-center items-center gap-2 tracking-widest text-neutral-950 bg-(--primary-color) hover:bg-(--primary-color-hover)/80">
           <ArrowLeft className="w-4 h-4" />
         </Link>
-        <div className="auth-container w-105">
-          {children}
+        <div className="auth-container flex flex-col items-center w-full max-w-105 h-fit z-10">
+          <Link className="flex justify-center items-center" href="/">
+            <Image
+              src="/entry-logo.svg"
+              alt="Logo"
+              width={140}
+              height={200}
+              className="mb-8 hover:brightness-80 transition-all"
+              priority
+            />
+          </Link>
+          <div className="w-full max-w-105">
+            {children}
+          </div>
         </div>
       </div>
     </>
   )
 }
-
-export default AuthLayout

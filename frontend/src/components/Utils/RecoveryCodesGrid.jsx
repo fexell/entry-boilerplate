@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Copy, Download, Check } from "lucide-react"
 
 // Shown after enabling 2FA or regenerating codes - identical UI in both flows.
-const RecoveryCodesGrid = ({ codes, onDone, doneLabel = "Done" }) => {
+export default function RecoveryCodesGrid({ codes, onDone, doneLabel = "Done" }) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
@@ -66,5 +66,3 @@ const RecoveryCodesGrid = ({ codes, onDone, doneLabel = "Done" }) => {
     </div>
   )
 }
-
-export default RecoveryCodesGrid

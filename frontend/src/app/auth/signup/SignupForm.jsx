@@ -8,7 +8,7 @@ import TextField from "@/components/UI/TextField"
 
 import api from "@/lib/api"
 
-const SignupForm = () => {
+export default function SignupForm() {
   const [formData, setFormData] = useState({
     email: "",
     username: "",
@@ -41,7 +41,7 @@ const SignupForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
+    <div className="flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
           <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
@@ -148,5 +148,3 @@ const SignupForm = () => {
     </div>
   )
 }
-
-export default SignupForm

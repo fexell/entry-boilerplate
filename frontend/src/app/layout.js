@@ -4,6 +4,7 @@ import { Toaster } from "sonner"
 import HeaderComponent from "@/components/Header/Header";
 import FooterComponent from "@/components/Footer/Footer";
 import AuthProvider from '@/components/Auth/AuthProvider';
+import CookieConsent from "@/components/UI/CookieConsent";
 
 import "./globals.css";
 
@@ -18,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: process.env.NEXT_PUBLIC_APP_NAME,
+  title: (process.env.NEXT_PUBLIC_APP_NAME ?? "ENTRY"),
   description: process.env.NEXT_PUBLIC_APP_DESCRIPTION,
 };
 
@@ -31,23 +32,31 @@ const RootLayout = ({ children }) => {
             {children}
           </AuthProvider>
 
+          <CookieConsent />
           <Toaster
             theme="dark"
             position="bottom-center"
             richColors={false}
+            closeButton
             toastOptions={{
               unstyled: false,
-              className: {
-                toast: "bg-neutral-950 border border-neutral-800 text-neutral-200 font-sans shadow-lg",
-                title: "text-sm text-neutral-200",
-                description: "text-sm text-neutral-400",
-                actionButton: "bg-(--primary-color) text-neutral-950",
-                cancelButton: "bg-neutral-800 text-neutral-300",
-              },
               classNames: {
-                success: "!border-green-800/60 !text-green-200/90",
-                error: "!border-red-800/60 !text-red-200/90",
-              }
+                toast:
+                  "!bg-neutral-950 !border !border-neutral-800 !text-neutral-200 !font-sans !rounded-lg !shadow-xl !shadow-black/40 !gap-3",
+                title: "!text-sm !font-medium !text-neutral-100",
+                description: "!text-sm !text-neutral-500 !mt-0.5",
+                actionButton:
+                  "!bg-(--primary-color) !text-neutral-950 !text-xs !font-medium !rounded-md hover:!bg-(--primary-color-hover)",
+                cancelButton:
+                  "!bg-neutral-800 !text-neutral-400 !text-xs !rounded-md hover:!bg-neutral-700",
+                closeButton:
+                  "!bg-neutral-900 !border-neutral-800 !text-neutral-500 hover:!text-neutral-300",
+                icon: "!text-neutral-500",
+                success: "!border-green-800/50 [&_[data-icon]]:!text-green-400",
+                error: "!border-red-800/50 [&_[data-icon]]:!text-red-400",
+                warning: "!border-amber-800/50 [&_[data-icon]]:!text-amber-400",
+                info: "!border-neutral-700 [&_[data-icon]]:!text-(--primary-color)",
+              },
             }}
           />
         </body>

@@ -1,7 +1,8 @@
 "use client"
 
-import useAuthStore from "@/store/useAuthStore"
 import DangerForm from "./DangerForm"
+
+import useAuthStore from "@/store/useAuthStore"
 
 export default function AccountSettingsPage() {
   const user = useAuthStore((state) => state.user)

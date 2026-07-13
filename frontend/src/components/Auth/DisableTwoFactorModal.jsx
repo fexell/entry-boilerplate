@@ -5,7 +5,7 @@ import { ShieldOff } from "lucide-react"
 import ConfirmCodeModal from "./ConfirmCodeModal"
 import api from "@/lib/api"
 
-const DisableTwoFactorModal = ({ isOpen, onClose, onDisabled }) => {
+export default function DisableTwoFactorModal({ isOpen, onClose, onDisabled }) {
   const handleSubmit = async (code) => {
     await api("/2fa/disable", {
       method: "POST",
@@ -30,5 +30,3 @@ const DisableTwoFactorModal = ({ isOpen, onClose, onDisabled }) => {
     />
   )
 }
-
-export default DisableTwoFactorModal

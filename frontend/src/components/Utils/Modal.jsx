@@ -9,7 +9,7 @@ import { X } from "lucide-react"
 // <Modal isOpen={open} onClose={close} icon={ShieldOff} title="..." description="...">
 //   <form>...</form>
 // </Modal>
-const Modal = ({
+export default function Modal({
   isOpen,
   onClose,
   icon: Icon,
@@ -21,7 +21,7 @@ const Modal = ({
   // "compact": p-6 card, icon+title inline, close button absolute top-right (Disable/Regenerate style)
   // "sectioned": header row with border-b and its own close button, separate padded body (Setup style)
   variant = "compact",
-}) => {
+}) {
   if (!isOpen) return null
 
   if (variant === "sectioned") {
@@ -76,6 +76,3 @@ const Modal = ({
     </div>
   )
 }
-
-
-export default Modal

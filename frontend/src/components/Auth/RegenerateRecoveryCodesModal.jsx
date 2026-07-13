@@ -8,7 +8,7 @@ import ConfirmCodeModal from "./ConfirmCodeModal"
 import RecoveryCodesGrid from "@/components/Utils/RecoveryCodesGrid"
 import api from "@/lib/api"
 
-const RegenerateRecoveryCodesModal = ({ isOpen, onClose, onRegenerated }) => {
+export default function RegenerateRecoveryCodesModal({ isOpen, onClose, onRegenerated }) {
   const [step, setStep] = useState("verify") // "verify" | "codes"
   const [recoveryCodes, setRecoveryCodes] = useState([])
   const [pendingMessage, setPendingMessage] = useState("")
@@ -71,5 +71,3 @@ const RegenerateRecoveryCodesModal = ({ isOpen, onClose, onRegenerated }) => {
     />
   )
 }
-
-export default RegenerateRecoveryCodesModal

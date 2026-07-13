@@ -3,14 +3,14 @@
 import Link from "next/link"
 import { ShieldCheck, ArrowRight } from "lucide-react"
 
-const LoggedOut = () => {
+export default function LoggedOut() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="flex items-center justify-center px-4">
       <div className="w-full max-w-sm text-center">
-        <div className="flex items-center justify-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
+        {/* <div className="flex items-center justify-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
           <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full" />
           {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()}
-        </div>
+        </div> */}
 
         <div className="mx-auto mb-6 flex items-center justify-center w-12 h-12 rounded-full bg-(--primary-color)/10 border border-(--primary-color)/20">
           <ShieldCheck className="w-5 h-5 text-(--primary-color)" />
@@ -44,5 +44,3 @@ const LoggedOut = () => {
     </div>
   )
 }
-
-export default LoggedOut

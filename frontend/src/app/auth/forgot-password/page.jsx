@@ -3,15 +3,13 @@
 import ForgotPasswordForm from "./ForgotPasswordForm"
 
 export const metadata = {
-  title: "Forgot Password | " + process.env.NEXT_PUBLIC_APP_NAME,
+  title: "Forgot Password | " + (process.env.NEXT_PUBLIC_APP_NAME ?? "ENTRY"),
 }
 
-const ForgotPasswordPage = () => {
+export default function ForgotPasswordPage() {
   return (
     <>
       <ForgotPasswordForm />
     </>
   );
 }
-
-export default ForgotPasswordPage

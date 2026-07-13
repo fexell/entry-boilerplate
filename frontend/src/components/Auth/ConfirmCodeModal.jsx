@@ -22,7 +22,7 @@ import FormError from "../Utils/FormError"
 //   numericOnly={false}
 //   onSubmit={async (code) => { await api("/2fa/disable", {...}); onDisabled() }}
 // />
-const ConfirmCodeModal = ({
+export default function ConfirmCodeModal({
   isOpen,
   onClose,
   icon,
@@ -34,7 +34,7 @@ const ConfirmCodeModal = ({
   numericOnly = true,
   requireLength = null, // e.g. 6 to force exact-length codes; null = just "non-empty"
   onSubmit, // async (code) => void - throw to show an error
-}) => {
+}) {
   const [code, setCode] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState(null)
@@ -94,5 +94,3 @@ const ConfirmCodeModal = ({
     </Modal>
   )
 }
-
-export default ConfirmCodeModal

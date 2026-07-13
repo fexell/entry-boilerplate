@@ -7,7 +7,7 @@ import { Lock, ArrowRight, CircleAlert, CircleCheck, Eye, EyeOff } from "lucide-
 
 import api from "@/lib/api"
 
-const ResetPasswordForm = () => {
+export default function ResetPasswordForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const userId = searchParams.get("userId")
@@ -54,13 +54,13 @@ const ResetPasswordForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
+    <div className="flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Eyebrow / brand mark */}
-        <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
+        {/* <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
           <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
           {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()}
-        </div>
+        </div> */}
 
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-neutral-100">
@@ -191,5 +191,3 @@ const ResetPasswordForm = () => {
     </div>
   )
 }
-
-export default ResetPasswordForm

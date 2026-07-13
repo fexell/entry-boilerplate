@@ -5,14 +5,16 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Mail, Lock, Eye, EyeOff, ArrowRight, CircleAlert, KeyRound } from "lucide-react"
 
-import api from "@/lib/api"
-import useAuthStore from "@/store/useAuthStore"
 import { getDeviceFingerprint } from "@/components/Utils/DeviceFingerprint"
 import TextField from "@/components/UI/TextField"
 
+import useAuthStore from "@/store/useAuthStore"
+
+import api from "@/lib/api"
+
 const REMEMBERED_EMAIL_KEY = "email"
 
-const LoginForm = () => {
+export default function LoginForm() {
   const router = useRouter()
   const setUser = useAuthStore((state) => state.setUser)
 
@@ -227,11 +229,11 @@ const LoginForm = () => {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4">
+      className="flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
           <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
-          ENTRY
+          {(process.env.NEXT_PUBLIC_APP_NAME ?? "ENTRY").toUpperCase()}
         </div>
 
         <div className="mb-8">
@@ -354,5 +356,3 @@ const LoginForm = () => {
     </div>
   )
 }
-
-export default LoginForm

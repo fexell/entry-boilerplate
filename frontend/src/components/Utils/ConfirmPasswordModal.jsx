@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { CircleAlert, Loader2, X, Eye, EyeOff } from "lucide-react"
 
-const ConfirmPasswordModal = ({
+export default function ConfirmPasswordModal({
   open,
   title,
   description,
@@ -12,7 +12,7 @@ const ConfirmPasswordModal = ({
   successMessage,
   onConfirm,
   onClose,
-}) => {
+}) {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [status, setStatus] = useState("idle") // idle | loading | success
@@ -124,5 +124,3 @@ const ConfirmPasswordModal = ({
     </div>
   )
 }
-
-export default ConfirmPasswordModal

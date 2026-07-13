@@ -6,7 +6,7 @@ import { Mail, ArrowRight, CircleAlert, CircleCheck } from "lucide-react"
 
 import api from "@/lib/api"
 
-const ResendVerificationForm = () => {
+export default function ResendVerificationForm() {
   const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errors, setErrors] = useState([])
@@ -35,13 +35,13 @@ const ResendVerificationForm = () => {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
+    <div className="flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Eyebrow / brand mark */}
-        <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
+        {/* <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
           <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
           {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()}
-        </div>
+        </div> */}
 
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-neutral-100">
@@ -88,7 +88,7 @@ const ResendVerificationForm = () => {
                     type="email"
                     placeholder="you@example.com"
                     autoComplete="email"
-                    className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-(--primary-color-60) focus:ring-2 focus:ring-(--primary-color-10)"
+                    className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-(--primary-color)/60 focus:ring-2 focus:ring-(--primary-color)/10"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -120,5 +120,3 @@ const ResendVerificationForm = () => {
     </div>
   )
 }
-
-export default ResendVerificationForm

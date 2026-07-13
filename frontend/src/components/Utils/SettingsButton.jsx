@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Settings } from "lucide-react"
 
-const SettingsButtonComponent = () => {
+export default function SettingsButtonComponent() {
   return (
     <>
       <Link
@@ -14,5 +14,3 @@ const SettingsButtonComponent = () => {
     </>
   );
 }
-
-export default SettingsButtonComponent

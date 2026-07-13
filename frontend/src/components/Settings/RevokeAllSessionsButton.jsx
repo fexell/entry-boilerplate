@@ -5,7 +5,7 @@ import { LogOut } from "lucide-react"
 import api from "@/lib/api"
 import ConfirmPasswordModal from "@/components/Utils/ConfirmPasswordModal"
 
-const RevokeAllSessionsButton = () => {
+export default function RevokeAllSessionsButton() {
   const [open, setOpen] = useState(false)
 
   const handleConfirm = async (password) => {
@@ -39,5 +39,3 @@ const RevokeAllSessionsButton = () => {
     </>
   )
 }
-
-export default RevokeAllSessionsButton

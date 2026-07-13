@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { TriangleAlert, ArrowRight } from "lucide-react"
 
-const NotFound = () => {
+export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 bg-neutral-950">
       <div className="w-full max-w-sm text-center">
@@ -35,5 +35,3 @@ const NotFound = () => {
     </div>
   )
 }
-
-export default NotFound

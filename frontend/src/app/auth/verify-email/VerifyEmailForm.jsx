@@ -4,9 +4,10 @@ import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { CircleAlert, CircleCheck, Loader2 } from "lucide-react"
+
 import api from "@/lib/api"
 
-const VerifyEmailForm = () => {
+export default function VerifyEmailForm() {
   const searchParams = useSearchParams()
   const userId = searchParams.get("userId")
   const token = searchParams.get("token")
@@ -18,7 +19,7 @@ const VerifyEmailForm = () => {
     const verify = async () => {
       if (!userId || !token) {
         setStatus("error")
-        setErrors(["Verifieringslänken saknar nödvändig information."])
+        setErrors(["The verification link is missing required information."])
         return
       }
 
@@ -40,12 +41,12 @@ const VerifyEmailForm = () => {
   }, [userId, token])
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
+    <div className="flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
+        {/* <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
           <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
-          {(process.env.NEXT_PUBLIC_APP_NAME).toUpperCase()}
-        </div>
+          {(process.env.NEXT_PUBLIC_APP_NAME ?? "ENTRY").toUpperCase()}
+        </div> */}
 
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-neutral-100">
@@ -114,5 +115,3 @@ const VerifyEmailForm = () => {
     </div>
   )
 }
-
-export default VerifyEmailForm

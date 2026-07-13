@@ -11,7 +11,7 @@ import TextField from "@/components/UI/TextField"
 import api from "@/lib/api"
 import useAuthStore from "@/store/useAuthStore"
 
-const SecuritySettingsPage = () => {
+export default function SecurityForm() {
   const user = useAuthStore((state) => state.user)
   const setUser = useAuthStore((state) => state.setUser)
   const twoFactorEnabled = Boolean(user?.twoFactorEnabled)
@@ -177,7 +177,7 @@ const SecuritySettingsPage = () => {
         </h2>
 
         {passwordSaved && (
-          <div className="flex items-start gap-3 bg-() border border-(--primary-color)/20 rounded-lg px-4 py-3.5 mb-5 max-w-md">
+          <div className="flex items-start gap-3 bg-(--primary-color) border border-(--primary-color)/20 rounded-lg px-4 py-3.5 mb-5 max-w-md">
             <CircleCheck className="w-4 h-4 text-(--primary-color) mt-0.5 shrink-0" />
             <p className="text-sm text-amber-300">Password updated successfully.</p>
           </div>
@@ -269,5 +269,3 @@ const SecuritySettingsPage = () => {
     </div>
   )
 }
-
-export default SecuritySettingsPage
