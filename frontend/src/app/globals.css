@@ -4,12 +4,6 @@
   --primary-color: #ffba00;
   --primary-color-hover: #ecd56d;
   --primary-color-disabled: #FFBA0066;
-  --primary-color-10: rgba(255, 186, 0, 0.1);
-  --primary-color-20: rgba(255, 186, 0, 0.2);
-  --primary-color-30: rgba(255, 186, 0, 0.3);
-  --primary-color-40: rgba(255, 186, 0, 0.4);
-  --primary-color-50: rgba(255, 186, 0, 0.5);
-  --primary-color-60: rgba(255, 186, 0, 0.6);
 }
 
 button:not(:disabled) {

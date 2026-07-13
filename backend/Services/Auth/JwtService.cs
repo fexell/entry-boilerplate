@@ -22,6 +22,14 @@ namespace Entry.Auth.Services
       _logger = logger;
     }
 
+    private void LogKeyFingerprint()
+    {
+      var keyBytes = Encoding.UTF8.GetBytes(_config["Jwt:Key"]!);
+      var hash = Convert.ToBase64String(System.Security.Cryptography.SHA256.HashData(keyBytes));
+
+      _logger.LogDebug("JWT Key hash: {Hash}", hash);
+    }
+
     private SigningCredentials GetSigningCredentials()
     {
       var key = new SymmetricSecurityKey(
@@ -82,8 +90,6 @@ namespace Entry.Auth.Services
         signingCredentials: GetSigningCredentials()
       );
 
-      _logger.LogDebug("Generated 2FA token for UserId: {UserId}", user.Id);
-
       return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
@@ -105,11 +111,19 @@ namespace Entry.Auth.Services
 
       try
       {
-        var principal = new JwtSecurityTokenHandler().ValidateToken(
+        var handler = new JwtSecurityTokenHandler();
+        handler.MapInboundClaims = false;
+
+        var principal = handler.ValidateToken(
           token,
           validationParameters,
           out _
         );
+
+        foreach(var claim in principal.Claims)
+        {
+          _logger.LogError("Claim: {Type} = {Value}", claim.Type, claim.Value);
+        }
 
         var purpose = principal.FindFirst("purpose")?.Value;
         if (purpose != TwoFactorPurpose)
@@ -118,7 +132,7 @@ namespace Entry.Auth.Services
           return null;
         }
 
-        var sub = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+        var sub = principal.FindFirst("sub")?.Value ?? principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
 
         if (sub is null)
         {
@@ -129,8 +143,11 @@ namespace Entry.Auth.Services
       }
       catch (Exception ex)
       {
-        _logger.LogWarning(ex, "2FA token validation failed.");
-        return null;
+          _logger.LogWarning(ex, "2FA token validation failed. Key length: {KeyLength}, Issuer: {Issuer}, Audience: {Audience}", 
+              _config["Jwt:Key"]?.Length ?? 0,
+              _config["Jwt:Issuer"],
+              _config["Jwt:Audience"]);
+          return null;
       }
     }
   }
