@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Mail, ArrowRight, CircleAlert, CircleCheck } from "lucide-react"
 
 import TextField from "@/components/UI/TextField"
+import SubmitButton from "@/components/UI/SubmitButton"
 
 import api from "@/lib/api"
 
@@ -87,14 +88,12 @@ export default function ForgotPasswordForm() {
                 onChange={(e) => setEmail(e.target.value)}
               />
 
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg py-2.5 mt-2 transition-colors group"
+              <SubmitButton
+                isLoading={isSubmitting}
                 disabled={isSubmitting || !email}
-              >
-                {isSubmitting ? "Sending..." : "Send reset link"}
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              </button>
+                icon={ArrowRight}>
+                Send reset link
+              </SubmitButton>
             </form>
           </>
         )}

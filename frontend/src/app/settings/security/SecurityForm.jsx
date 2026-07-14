@@ -7,6 +7,7 @@ import TwoFactorSetupModal from "@/components/Auth/TwoFactorSetupModal"
 import DisableTwoFactorModal from "@/components/Auth/DisableTwoFactorModal"
 import RegenerateRecoveryCodesModal from "@/components/Auth/RegenerateRecoveryCodesModal"
 import TextField from "@/components/UI/TextField"
+import SaveButton from "@/components/UI/SaveButton"
 
 import api from "@/lib/api"
 import useAuthStore from "@/store/useAuthStore"
@@ -30,7 +31,7 @@ export default function SecurityForm() {
   })
   const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false)
   const [passwordErrors, setPasswordErrors] = useState([])
-  const [passwordSaved, setPasswordSaved] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState("")
 
   const [showPasswords, setShowPasswords] = useState(false)
 
@@ -74,7 +75,7 @@ export default function SecurityForm() {
   const handlePasswordSubmit = async (e) => {
     e.preventDefault()
     setPasswordErrors([])
-    setPasswordSaved(false)
+    setPasswordMessage("")
     clearTimeout(successTimeoutRef.current)
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -85,7 +86,7 @@ export default function SecurityForm() {
     setIsPasswordSubmitting(true)
 
     try {
-      await api("/account/password", {
+      const response = await api("/account/password", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -93,11 +94,11 @@ export default function SecurityForm() {
           newPassword: passwordData.newPassword,
         }),
       })
-      setPasswordSaved(true)
+      setPasswordMessage(response?.message || "Password updated successfully.")
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" })
 
       clearTimeout(successTimeoutRef.current)
-      successTimeoutRef.current = setTimeout(() => setPasswordSaved(false), 5000)
+      successTimeoutRef.current = setTimeout(() => setPasswordMessage(""), 5000)
     } catch (err) {
       setPasswordErrors(err.errors?.length ? err.errors : [err.message])
     } finally {
@@ -176,10 +177,10 @@ export default function SecurityForm() {
           Change password
         </h2>
 
-        {passwordSaved && (
-          <div className="flex items-start gap-3 bg-(--primary-color) border border-(--primary-color)/20 rounded-lg px-4 py-3.5 mb-5 max-w-md">
+        {passwordMessage && (
+          <div className="flex items-start gap-3 bg-(--primary-color)/10 border border-(--primary-color)/20 rounded-lg px-4 py-3.5 mb-5 max-w-md">
             <CircleCheck className="w-4 h-4 text-(--primary-color) mt-0.5 shrink-0" />
-            <p className="text-sm text-amber-300">Password updated successfully.</p>
+            <p className="text-sm text-amber-300">{passwordMessage}</p>
           </div>
         )}
 
@@ -233,18 +234,15 @@ export default function SecurityForm() {
           />
 
           <div className="flex items-center gap-3 pt-1">
-            <button
-              type="submit"
+            <SaveButton
+              isSubmitting={isPasswordSubmitting}
               disabled={
                 isPasswordSubmitting ||
                 !passwordData.currentPassword ||
                 !passwordData.newPassword ||
                 !passwordData.confirmPassword
               }
-              className="flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg px-5 py-2.5 transition-colors"
-            >
-              {isPasswordSubmitting ? "Updating..." : "Update password"}
-            </button>
+            >Update password</SaveButton>
           </div>
         </form>
       </section>

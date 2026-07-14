@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { LogOut } from "lucide-react"
+import { toast } from "sonner"
 
 import useAuthStore from "@/store/useAuthStore"
 
@@ -13,6 +14,7 @@ export default function LogoutButtonComponent({ className = "" }) {
   const handleLogout = async () => {
     await logout()
     router.push("/auth/logged-out?from=logout")
+    toast.success("Logged out.")
   }
 
   return (

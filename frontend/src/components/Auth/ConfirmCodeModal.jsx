@@ -78,7 +78,7 @@ export default function ConfirmCodeModal({
           <button
             type="submit"
             disabled={isSubmitting || !isValid}
-            className="flex-1 flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg px-5 py-2.5 transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color)/50 disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg px-5 py-2.5 transition-colors"
           >
             {isSubmitting ? submittingLabel : submitLabel}
           </button>

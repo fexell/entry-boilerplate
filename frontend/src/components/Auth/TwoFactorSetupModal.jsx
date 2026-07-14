@@ -140,7 +140,7 @@ export default function TwoFactorSetupModal({ isOpen, onClose, onEnabled }) {
             <button
               type="submit"
               disabled={isVerifying || code.length !== 6}
-              className="w-full flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg px-4 py-2.5 transition-colors"
+              className="w-full flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color)/50 disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg px-4 py-2.5 transition-colors"
             >
               {isVerifying ? "Verifying..." : "Verify and enable"}
             </button>

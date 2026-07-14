@@ -7,6 +7,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, CircleAlert, KeyRound } from "luci
 
 import { getDeviceFingerprint } from "@/components/Utils/DeviceFingerprint"
 import TextField from "@/components/UI/TextField"
+import SubmitButton from '@/components/UI/SubmitButton'
 
 import useAuthStore from "@/store/useAuthStore"
 
@@ -290,7 +291,7 @@ export default function LoginForm() {
                 type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 autoComplete="current-password"
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-amber-400/60 focus:ring-2 focus:ring-amber-400/10"
+                className="w-full bg-neutral-900 border border-neutral-800 rounded-lg pl-10 pr-10 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 outline-none transition-colors focus:border-(--primary-color)/60 focus:ring-2 focus:ring-(--primary-color)/10"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
@@ -333,14 +334,7 @@ export default function LoginForm() {
             </span>
           </label>
 
-          <button
-            type="submit"
-            className="w-full flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg py-2.5 mt-2 transition-colors group"
-            disabled={isSubmitting || (!formData.email || !formData.password)}
-          >
-            {isSubmitting ? "Logging in..." : "Log in"}
-            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-          </button>
+          <SubmitButton isLoading={isSubmitting} disabled={!formData.email || !formData.password} icon={ArrowRight}>Sign in</SubmitButton>
         </form>
 
         <p className="mt-6 text-center text-sm text-neutral-500">

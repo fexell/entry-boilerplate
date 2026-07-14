@@ -4,7 +4,10 @@ import { useState } from "react"
 import Link from "next/link"
 import { Mail, User, Lock, Eye, EyeOff, ArrowRight, CircleAlert, CircleCheck } from "lucide-react"
 
+
 import TextField from "@/components/UI/TextField"
+import Spinner from "@/components/UI/Spinner"
+import SubmitButton from "@/components/UI/SubmitButton"
 
 import api from "@/lib/api"
 
@@ -40,7 +43,15 @@ export default function SignupForm() {
     }
   }
 
-  return (
+  return isSubmitting
+  ? (
+    <>
+      <div className="flex items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    </>
+  )
+  : (
     <div className="flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex items-center gap-2 mb-8 font-mono text-xs tracking-widest text-neutral-500">
@@ -59,15 +70,26 @@ export default function SignupForm() {
 
         {/* Success state replaces the form entirely */}
         {success ? (
-          <div className="flex items-start gap-3 bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-4 py-3.5">
-            <CircleCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm text-emerald-300 font-medium">Account created</p>
-              <p className="text-sm text-neutral-400 mt-0.5">
-                Check your inbox to verify your email before logging in.
-              </p>
+          <>
+            <div className="flex items-start mb-8 gap-3 bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-4 py-3.5">
+              <CircleCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm text-emerald-300 font-medium">Account created</p>
+                <p className="text-sm text-neutral-400 mt-0.5">
+                  Check your inbox to verify your email before logging in.
+                </p>
+              </div>
             </div>
-          </div>
+            <div>
+              <Link
+                href="/auth/login"
+                className="mt-2 w-full flex items-center justify-center gap-2 bg-emerald-400 hover:bg-emerald-500 text-neutral-950 font-medium text-sm rounded-lg py-2.5 transition-colors group"
+              >
+                Log in
+                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </div>
+          </>
         ) : (
           <>
             {(errors.length > 0) && (
@@ -123,14 +145,10 @@ export default function SignupForm() {
                 </p>
               </div>
 
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg py-2.5 mt-2 transition-colors group"
+              <SubmitButton
+                isLoading={isSubmitting}
                 disabled={isSubmitting || (!formData.email || !formData.username || !formData.password)}
-              >
-                {isSubmitting ? "Signing up..." : "Create account"}
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              </button>
+                icon={ArrowRight}>Sign up</SubmitButton>
             </form>
 
             <p className="mt-6 text-center text-sm text-neutral-500">

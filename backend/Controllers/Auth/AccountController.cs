@@ -103,7 +103,7 @@ namespace Entry.Auth.Controllers
       var revoked = await _refreshTokenService.RevokeSessionAsync(user!.Id, id);
       if(!revoked) return NotFound(new { message = "Session not found." });
 
-      return NoContent();
+      return Ok(new { message = "Session revoked successfully." });
     }
 
     // REVOKE ALL SESSIONS EXCEPT CURRENT (REQUIRES VALID PASSWORD AND CURRENT REFRESH TOKEN)
@@ -121,7 +121,7 @@ namespace Entry.Auth.Controllers
 
       await _refreshTokenService.RevokeAllSessionsExceptCurrentAsync(user!.Id, currentRefreshToken);
 
-      return NoContent();
+      return Ok(new { message = "All sessions revoked successfully." });
     }
 
     // UPDATE PROFILE (FIRST NAME, LAST NAME, ETC.)
@@ -135,7 +135,7 @@ namespace Entry.Auth.Controllers
       if(!success) return BadRequest(new { message = "Could not update profile." });
 
       var me = await _userService.GetUserMeAsync(user!);
-      return Ok(me);
+      return Ok(new { message = "Profile updated successfully.", user = me });
     }
 
     // CHANGE PASSWORD
@@ -160,7 +160,7 @@ namespace Entry.Auth.Controllers
 
       await _refreshTokenService.RevokeAllSessionsExceptCurrentAsync(user!.Id, currentRefreshToken);
 
-      return NoContent();
+      return Ok(new { message = "Password changed successfully." });
     }
 
     // REQUEST EMAIL CHANGE

@@ -7,6 +7,13 @@ const CSRF_HEADER_NAME = "X-CSRF-TOKEN"
 
 const SAFE_METHODS = new Set(["GET", "HEAD"])
 
+// Success toasts should never fire for silent auth machinery, even if a
+// response happens to include a message field - these calls aren't
+// user-initiated actions and shouldn't produce user-facing feedback.
+const NO_TOAST_PATHS = ["/auth/refresh", "/auth/csrf-token"]
+
+const shouldToastForPath = (path) => !NO_TOAST_PATHS.some((noToastPath) => path.startsWith(noToastPath))
+
 let refreshPromise = null
 let csrfTokenPromise = null
 
@@ -189,7 +196,7 @@ export default async function api(path, options = {}) {
 
   const { data } = await parseBody(res)
 
-  if (!silent && typeof data?.message === "string") {
+  if (!silent && shouldToastForPath(path) && typeof data?.message === "string") {
     toast.success(data.message)
   }
 

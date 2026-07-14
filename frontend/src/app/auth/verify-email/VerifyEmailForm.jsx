@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { CircleAlert, CircleCheck, Loader2 } from "lucide-react"
@@ -14,6 +14,7 @@ export default function VerifyEmailForm() {
 
   const [status, setStatus] = useState("verifying") // "verifying" | "success" | "error"
   const [errors, setErrors] = useState([])
+  const hasVerified = useRef(false)
 
   useEffect(() => {
     const verify = async () => {
@@ -22,6 +23,12 @@ export default function VerifyEmailForm() {
         setErrors(["The verification link is missing required information."])
         return
       }
+
+      // Prevent duplicate requests (e.g. from React StrictMode double-invoking
+      // this effect in dev), since the token is single-use on the backend and
+      // a second call would fail with "already used" after the first succeeded.
+      if (hasVerified.current) return
+      hasVerified.current = true
 
       try {
         await api("/auth/verify-email", {

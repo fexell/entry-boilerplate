@@ -35,7 +35,7 @@ export default function UserDeleted() {
           Changed your mind?{" "}
           <Link
             href="/auth/signup"
-            className="text-neutral-200 hover:text-amber-400 transition-colors underline underline-offset-4 decoration-neutral-700"
+            className="text-neutral-200 hover:text-(--primary-color) transition-colors underline underline-offset-4 decoration-neutral-700"
           >
             Create a new account
           </Link>

@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { User, Mail, CircleCheck, CircleAlert } from "lucide-react"
+import { User, Mail, CircleCheck, CircleAlert, Save } from "lucide-react"
 
 import TextField from "@/components/UI/TextField"
 import TextAreaField from "@/components/UI/TextAreaField"
 import ConfirmPasswordModal from "@/components/Utils/ConfirmPasswordModal"
+import SaveButton from '@/components/UI/SaveButton'
 
 import useAuthStore from "@/store/useAuthStore"
 
@@ -40,17 +41,23 @@ const NameSection = () => {
   const user = useAuthStore((state) => state.user)
   const setUser = useAuthStore((state) => state.setUser)
 
+  const initialFirstName = user?.firstName ?? ""
+  const initialLastName = user?.lastName ?? ""
+
   const [formData, setFormData] = useState({
-    firstName: user?.firstName ?? "",
-    lastName: user?.lastName ?? "",
+    firstName: initialFirstName,
+    lastName: initialLastName,
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [saved, setSaved] = useState(false)
 
+  const nameRegex = /^[a-zA-Z]{2,}$/
+
   const isSubmitDisabled =
     isSubmitting ||
-    (formData.firstName === user?.firstName && formData.lastName === user?.lastName) ||
-    (RegExp(/\s/).test(formData.firstName) || RegExp(/\s/).test(formData.lastName))
+    (formData.firstName === initialFirstName && formData.lastName === initialLastName) ||
+    !nameRegex.test(formData.firstName) ||
+    !nameRegex.test(formData.lastName)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -58,12 +65,12 @@ const NameSection = () => {
     setIsSubmitting(true)
 
     try {
-      const me = await api("/account/profile", {
+      const response = await api("/account/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       })
-      setUser(me)
+      setUser(response.user)
       setSaved(true)
     } finally {
       setIsSubmitting(false)
@@ -99,13 +106,7 @@ const NameSection = () => {
         </div>
 
         <div className="flex items-center gap-3 pt-1">
-          <button
-            type="submit"
-            disabled={isSubmitDisabled}
-            className="flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg px-5 py-2.5 transition-colors"
-          >
-            {isSubmitting ? "Saving..." : "Save changes"}
-          </button>
+          <SaveButton isSubmitting={isSubmitting} disabled={isSubmitDisabled}>Save changes</SaveButton>
 
           {saved && (
             <span className="flex items-center gap-1.5 text-sm text-neutral-500">
@@ -147,12 +148,12 @@ const BioSection = () => {
     setIsSubmitting(true)
 
     try {
-      const me = await api("/account/profile", {
+      const response = await api("/account/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bio }),
       })
-      setUser(me)
+      setUser(response.user)
       setSaved(true)
     } catch (err) {
       setError(err.message)
@@ -188,13 +189,7 @@ const BioSection = () => {
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={isSubmitDisabled}
-              className="flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg px-5 py-2.5 transition-colors"
-            >
-              {isSubmitting ? "Saving..." : "Save changes"}
-            </button>
+            <SaveButton isSubmitting={isSubmitting} disabled={isSubmitDisabled}>Save changes</SaveButton>
 
             {saved && (
               <span className="flex items-center gap-1.5 text-sm text-neutral-500">
@@ -225,6 +220,7 @@ const EmailSection = () => {
   const user = useAuthStore((state) => state.user)
 
   const [newEmail, setNewEmail] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
 
   const isSubmitDisabled = !newEmail || newEmail === user?.email
@@ -263,14 +259,7 @@ const EmailSection = () => {
           placeholder="you@example.com"
           autoComplete="email"
         />
-
-        <button
-          type="submit"
-          disabled={isSubmitDisabled}
-          className="flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg px-5 py-2.5 transition-colors"
-        >
-          Change email address
-        </button>
+        <SaveButton disabled={isSubmitDisabled}>Change email address</SaveButton>
       </form>
 
       <ConfirmPasswordModal

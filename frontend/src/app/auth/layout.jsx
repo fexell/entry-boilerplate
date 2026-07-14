@@ -32,13 +32,13 @@ export default function AuthLayout({ children }) {
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div className="auth-container flex flex-col items-center w-full max-w-105 h-fit z-10">
-          <Link className="flex justify-center items-center" href="/">
+          <Link className="flex justify-center items-center h-[80px]" href="/">
             <Image
-              src="/entry-logo.svg"
+              src="/entry-logo-icon.svg"
               alt="Logo"
-              width={140}
-              height={200}
-              className="mb-8 hover:brightness-80 transition-all"
+              width={80}
+              height={0}
+              className="h-auto mb-8 hover:brightness-80 transition-all"
               priority
             />
           </Link>

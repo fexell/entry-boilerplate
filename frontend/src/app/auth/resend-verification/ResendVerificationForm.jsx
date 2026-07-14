@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Mail, ArrowRight, CircleAlert, CircleCheck } from "lucide-react"
 
 import api from "@/lib/api"
+import SubmitButton from '@/components/UI/SubmitButton'
 
 export default function ResendVerificationForm() {
   const [email, setEmail] = useState("")
@@ -95,14 +96,13 @@ export default function ResendVerificationForm() {
                 </div>
               </div>
 
-              <button
-                type="submit"
-                className="w-full flex items-center justify-center gap-2 bg-(--primary-color) hover:bg-(--primary-color-hover) disabled:bg-(--primary-color-disabled) disabled:cursor-not-allowed text-neutral-950 font-medium text-sm rounded-lg py-2.5 mt-2 transition-colors group"
+              <SubmitButton
+                isLoading={isSubmitting}
                 disabled={isSubmitting || !email}
+                icon={ArrowRight}
               >
-                {isSubmitting ? "Sending..." : "Send verification link"}
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
-              </button>
+                Resend verification
+              </SubmitButton>
             </form>
           </>
         )}
