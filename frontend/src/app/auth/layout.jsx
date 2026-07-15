@@ -5,13 +5,17 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import { usePathname } from "next/navigation"
 
 import useAuthStore from '@/store/useAuthStore'
 
 export default function AuthLayout({ children }) {
   const router = useRouter()
+  const pathname = usePathname()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const isInitialized = useAuthStore((state) => state.isInitialized)
+
+  const paths = ["/auth/login", "/auth/register", "/auth/resend-verification"]
 
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
@@ -27,7 +31,7 @@ export default function AuthLayout({ children }) {
       <div
         className="auth flex flex-col items-center justify-center min-h-screen bg-neutral-950">
         <Link
-          href="/"
+          href={ paths.includes(pathname) ? "/auth" : "/auth/login" }
           className="absolute top-4 left-4 flex w-8 h-8 rounded-full justify-center items-center gap-2 tracking-widest text-neutral-950 bg-(--primary-color) hover:bg-(--primary-color-hover)/80">
           <ArrowLeft className="w-4 h-4" />
         </Link>
