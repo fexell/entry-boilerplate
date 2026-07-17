@@ -27,6 +27,11 @@ namespace Entry.Auth.Services
       _db = db;
     }
 
+    private static string? NormalizeOptional(string? value)
+    {
+      return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
     // ------------------------------------------------------
     // GET USER
     // ------------------------------------------------------
@@ -85,7 +90,13 @@ namespace Entry.Auth.Services
 
       if(dto.Bio != null && dto.Bio != user.Bio)
       {
-        user.Bio = dto.Bio;
+        user.Bio = NormalizeOptional(dto.Bio);
+        updated = true;
+      }
+
+      if(dto.WebsiteUrl != null && dto.WebsiteUrl != user.WebsiteUrl)
+      {
+        user.WebsiteUrl = NormalizeOptional(dto.WebsiteUrl);
         updated = true;
       }
 
@@ -172,14 +183,16 @@ namespace Entry.Auth.Services
         FirstName = user.FirstName,
         LastName = user.LastName,
         Bio = user.Bio,
+        WebsiteUrl = user.WebsiteUrl,
         Premium = user.Premium,
-        TwoFactorEnabled = user.TwoFactorEnabled
+        TwoFactorEnabled = user.TwoFactorEnabled,
+        SocialLinks = await GetSocialLinksAsync(user.Id)
       };
     }
 
-    public Task<PublicUserDto> GetPublicUserAsync(AppUser user)
+    public async Task<PublicUserDto> GetPublicUserAsync(AppUser user)
     {
-      return Task.FromResult(new PublicUserDto
+      return new PublicUserDto
       {
         Id = user.Id,
         Username = user.UserName!,
@@ -188,8 +201,43 @@ namespace Entry.Auth.Services
         Avatar = user.Avatar,
         Bio = user.Bio,
         CreatedAt = user.CreatedAt,
-        Premium = user.Premium
-      });
+        Premium = user.Premium,
+        WebsiteUrl = user.WebsiteUrl,
+        SocialLinks = await GetSocialLinksAsync(user.Id)
+      };
+    }
+
+    public async Task<List<string>> GetSocialLinksAsync(string userId)
+    {
+      return await _db.SocialLinks
+        .Where(x => x.UserId == userId)
+        .OrderBy(x => x.SortOrder)
+        .Select(x => x.Url)
+        .ToListAsync();
+    }
+
+    public async Task<bool> UpdateSocialLinksAsync(AppUser user, SocialLinksUpdateDto dto)
+    {
+      var existing = await _db.SocialLinks
+        .Where(x => x.UserId == user.Id)
+        .ToListAsync();
+
+      _db.SocialLinks.RemoveRange(existing);
+
+      var newLinks = dto.Urls
+        .Where(u => !string.IsNullOrWhiteSpace(u))
+        .Take(4)
+        .Select((url, index) => new SocialLink
+        {
+          UserId = user.Id,
+          Url = url.Trim(),
+          SortOrder = index
+        });
+
+      await _db.SocialLinks.AddRangeAsync(newLinks);
+      await _db.SaveChangesAsync();
+
+      return true;
     }
   }
 }

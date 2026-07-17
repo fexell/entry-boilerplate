@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
 
 namespace Entry.Auth.Models
 {
@@ -20,6 +21,10 @@ namespace Entry.Auth.Models
     public DateTime? LastVerificationEmailSentAt { get; set; }
 
     public ICollection<UserSession> Sessions { get; set; } = new List<UserSession>();
+
+    [MaxLength(256)]
+    public string? WebsiteUrl { get; set; }
+    public ICollection<SocialLink> SocialLinks { get; set; } = new List<SocialLink>();
 
     public string? LastKnownIp { get; set; }
     public string? LastKnownCountry { get; set; }

@@ -12,5 +12,7 @@ namespace Entry.Auth.DTOs
     public string? Avatar { get; set; }
     public DateTime CreatedAt { get; set; }
     public bool Premium { get; set; }
+    public string? WebsiteUrl { get; set; }
+    public List<string> SocialLinks { get; set; } = new();
   }
 }

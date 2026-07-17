@@ -34,6 +34,12 @@ namespace Entry.Auth.DTOs
     [RegularExpression("^[a-zA-Z]+$", ErrorMessage = "Last name can only contain letters")]
     public string? LastName { get; set; }
 
+    [MaxLength(256, ErrorMessage = "Website URL must be at most 256 characters long")]
+    public string? WebsiteUrl { get; set; }
+
+    [MaxLength(4)]
+    public List<string> SocialLinks { get; set; } = new();
+
     public bool Premium { get; set; }
     public bool TwoFactorEnabled { get; set; }
   }

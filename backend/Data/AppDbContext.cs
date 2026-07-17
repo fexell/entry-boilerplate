@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 using Entry.Auth.Models;
 
@@ -14,10 +15,38 @@ namespace Entry.Auth.Data
     public DbSet<UserSession> UserSessions { get; set; } = null!;
     public DbSet<AuthAttempt> AuthAttempts { get; set; } = null!;
     public DbSet<LoginRiskAssessment> LoginRiskAssessments { get; set; } = null!;
+    public DbSet<SocialLink> SocialLinks { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
       base.OnModelCreating(builder);
+
+      // SQL Server has no timezone-aware datetime type, so EF Core reads
+      // every DateTime back as Kind=Unspecified even though we always write
+      // DateTime.UtcNow. Without this, System.Text.Json serializes those
+      // values without a "Z" suffix, and JS then parses them as local time
+      // instead of UTC - causing relative-time displays to be off by the
+      // client's UTC offset (e.g. "2 hours ago" right after login).
+      foreach (var entityType in builder.Model.GetEntityTypes())
+      {
+        foreach (var property in entityType.GetProperties())
+        {
+          if (property.ClrType == typeof(DateTime))
+          {
+            property.SetValueConverter(new ValueConverter<DateTime, DateTime>(
+              v => v,
+              v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+            ));
+          }
+          else if (property.ClrType == typeof(DateTime?))
+          {
+            property.SetValueConverter(new ValueConverter<DateTime?, DateTime?>(
+              v => v,
+              v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v
+            ));
+          }
+        }
+      }
 
       builder.Entity<AppUser>(entity =>
       {
@@ -30,6 +59,7 @@ namespace Entry.Auth.Data
         entity.Property(x => x.LastName).HasMaxLength(64);
         entity.Property(x => x.Avatar).HasMaxLength(256);
         entity.Property(x => x.Premium).HasDefaultValue(false);
+        entity.Property(x => x.WebsiteUrl).HasMaxLength(256);
       });
 
       builder.Entity<IdentityRole>(entity => entity.ToTable("Roles"));
@@ -124,6 +154,21 @@ namespace Entry.Auth.Data
               .WithMany()
               .HasForeignKey(x => x.UserId)
               .OnDelete(DeleteBehavior.SetNull);
+      });
+
+      builder.Entity<SocialLink>(entity =>
+      {
+        entity.HasKey(x => x.Id);
+
+        entity.Property(x => x.UserId).IsRequired();
+        entity.Property(x => x.Url).IsRequired().HasMaxLength(256);
+
+        entity.HasIndex(x => x.UserId);
+
+        entity.HasOne(x => x.User)
+          .WithMany(u => u.SocialLinks)
+          .HasForeignKey(x => x.UserId)
+          .OnDelete(DeleteBehavior.Cascade);
       });
     }
   }

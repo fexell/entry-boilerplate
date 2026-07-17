@@ -15,7 +15,7 @@ export default function AuthLayout({ children }) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const isInitialized = useAuthStore((state) => state.isInitialized)
 
-  const paths = ["/auth/login", "/auth/register", "/auth/resend-verification"]
+  const paths = ["/auth/login", "/auth/signup", "/auth/forgot-password", "/auth/resend-verification"]
 
   useEffect(() => {
     if (isInitialized && isAuthenticated) {
@@ -29,14 +29,14 @@ export default function AuthLayout({ children }) {
   return (
     <>
       <div
-        className="auth flex flex-col items-center justify-center min-h-screen bg-neutral-950">
+        className="auth flex flex-col items-center justify-center min-h-[calc(100vh-57px)] bg-neutral-950">
         <Link
           href={ paths.includes(pathname) ? "/auth" : "/auth/login" }
-          className="absolute top-4 left-4 flex w-8 h-8 rounded-full justify-center items-center gap-2 tracking-widest text-neutral-950 bg-(--primary-color) hover:bg-(--primary-color-hover)/80">
+          className="absolute top-4 left-4 flex w-8 h-8 rounded-full justify-center items-center gap-2 tracking-widest text-neutral-950 bg-(--primary-color) hover:bg-(--primary-color-hover)">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <div className="auth-container flex flex-col items-center w-full max-w-105 h-fit z-10">
-          <Link className="flex justify-center items-center h-[80px]" href="/">
+          <Link className="flex justify-center items-center h-20" href="/">
             <Image
               src="/entry-logo-icon.svg"
               alt="Logo"

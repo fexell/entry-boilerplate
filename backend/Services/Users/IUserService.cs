@@ -24,5 +24,8 @@ namespace Entry.Auth.Services
 
     Task<UserMeDto> GetUserMeAsync(AppUser user);
     Task<PublicUserDto> GetPublicUserAsync(AppUser user);
+
+    Task<List<string>> GetSocialLinksAsync(string userId);
+    Task<bool> UpdateSocialLinksAsync(AppUser user, SocialLinksUpdateDto dto);
   }
 }

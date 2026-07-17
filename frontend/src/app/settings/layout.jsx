@@ -38,9 +38,9 @@ export default function SettingsLayout({ children }) {
   if(!isAuthenticated && isLoggingOut) return null
 
   return (
-    <div className="min-h-screen bg-neutral-950">
+    <div className="min-h-[calc(100vh-57px)] bg-neutral-950">
       <div className="max-w-5xl mx-auto px-4 py-10 sm:py-14">
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex items-center justify-between mb-10 py-4 sticky top-0 bg-neutral-950">
           <div className="flex items-center gap-2 font-mono text-xs tracking-widest text-neutral-500">
             <span className="inline-block w-1.5 h-1.5 bg-(--primary-color) rounded-full animate-pulse" />
             {(process.env.NEXT_PUBLIC_APP_NAME ?? "ENTRY").toUpperCase()} — ACCOUNT SETTINGS

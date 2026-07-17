@@ -138,6 +138,19 @@ namespace Entry.Auth.Controllers
       return Ok(new { message = "Profile updated successfully.", user = me });
     }
 
+    [HttpPut("social-links")]
+    public async Task<IActionResult> UpdateSocialLinks([FromBody] SocialLinksUpdateDto dto)
+    {
+      var (user, error) = await GetCurrentUserOrNotFoundAsync();
+      if(error != null) return error;
+
+      var success = await _userService.UpdateSocialLinksAsync(user!, dto);
+      if(!success) return BadRequest(new { message = "Could not update social links." });
+
+      var me = await _userService.GetUserMeAsync(user!);
+      return Ok(new { message = "Social links updated successfully.", user = me });
+    }
+
     // CHANGE PASSWORD
     [HttpPatch("password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)

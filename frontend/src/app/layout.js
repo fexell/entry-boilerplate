@@ -1,3 +1,5 @@
+import Link from "next/link";
+import Image from "next/image";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner"
 
@@ -31,6 +33,30 @@ const RootLayout = ({ children }) => {
           <AuthProvider>
             {children}
           </AuthProvider>
+
+          <div className="border-t border-neutral-800 bg-neutral-950 px-4 py-4">
+            <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 text-xs text-neutral-600 sm:flex-row">
+              <span>
+                &copy; {new Date().getFullYear()}{" "}
+                {process.env.NEXT_PUBLIC_APP_NAME ?? "Entry"}. All rights
+                reserved.
+              </span>
+              <div>
+                <Link
+                  href="/"
+                  className="text-neutral-500 transition-colors hover:text-(--primary-color)"
+                >
+                  <Image src="/entry-logo-icon.svg" alt="Entry Logo" width={24} height={24} />
+                </Link>
+              </div>
+              <Link
+                href="/info"
+                className="text-neutral-500 transition-colors hover:text-(--primary-color)"
+              >
+                Terms, Privacy & Cookies
+              </Link>
+            </div>
+          </div>
 
           <CookieConsent />
           <Toaster

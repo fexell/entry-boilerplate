@@ -40,7 +40,7 @@ export default function CookieNotice() {
         <p className="text-sm leading-relaxed text-neutral-300">
           This site uses cookies to function and to understand how it is used.{" "}
           <a
-            href="/cookies"
+            href="/info/cookies"
             className="font-medium text-(--primary-color) underline underline-offset-2 hover:text-(--primary-color-hover)"
           >
             Read more

@@ -26,5 +26,8 @@ namespace Entry.Auth.DTOs
 
     [MaxLength(160, ErrorMessage = "Bio must be at most 160 characters long")]
     public string? Bio { get; set; }
+
+    [MaxLength(256, ErrorMessage = "Website URL must be at most 256 characters long")]
+    public string? WebsiteUrl { get; set; }
   }
 }

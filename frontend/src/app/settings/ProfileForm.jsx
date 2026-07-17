@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { User, Mail, CircleCheck, CircleAlert, Save } from "lucide-react"
+import { User, Mail, Globe, Link as LinkIcon, CircleCheck, CircleAlert, Save } from "lucide-react"
 
 import TextField from "@/components/UI/TextField"
 import TextAreaField from "@/components/UI/TextAreaField"
@@ -13,6 +13,9 @@ import useAuthStore from "@/store/useAuthStore"
 import api from "@/lib/api"
 
 const BIO_MAX_LENGTH = 160
+const MAX_SOCIAL_LINKS = 4
+
+const padLinks = (links) => [...links, "", "", "", ""].slice(0, MAX_SOCIAL_LINKS)
 
 export default function ProfileForm() {
   const user = useAuthStore((state) => state.user)
@@ -28,6 +31,8 @@ export default function ProfileForm() {
 
       <NameSection user={user} />
       <BioSection user={user} />
+      <WebsiteSection user={user} />
+      <SocialLinksSection user={user} />
       <EmailSection user={user} />
     </div>
   )
@@ -206,6 +211,180 @@ const BioSection = () => {
           >
             {remaining}
           </span>
+        </div>
+      </form>
+    </section>
+  )
+}
+
+// ------------------------------------------------------
+// WEBSITE URL
+// ------------------------------------------------------
+
+const WebsiteSection = () => {
+  const user = useAuthStore((state) => state.user)
+  const setUser = useAuthStore((state) => state.setUser)
+
+  const initialUrl = user?.websiteUrl ?? ""
+
+  const [url, setUrl] = useState(initialUrl)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState(null)
+
+  const isSubmitDisabled = isSubmitting || url === initialUrl
+
+  const handleChange = (e) => {
+    setUrl(e.target.value)
+    setSaved(false)
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaved(false)
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      const response = await api("/account/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ websiteUrl: url.trim() }),
+      })
+      setUser(response.user)
+      setSaved(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-3">
+        URL
+      </h2>
+
+      {error && (
+        <div className="flex items-start gap-3 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3.5 mb-5 max-w-md">
+          <CircleAlert className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-red-300">{error}</p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-5 max-w-md">
+        <TextField
+          id="websiteUrl"
+          icon={Globe}
+          type="url"
+          value={url}
+          onChange={handleChange}
+          placeholder="https://your-site.com"
+          autoComplete="url"
+        />
+
+        <div className="flex items-center gap-3">
+          <SaveButton isSubmitting={isSubmitting} disabled={isSubmitDisabled}>Save changes</SaveButton>
+
+          {saved && (
+            <span className="flex items-center gap-1.5 text-sm text-neutral-500">
+              <CircleCheck className="w-4 h-4 text-(--primary-color)" />
+              Saved
+            </span>
+          )}
+        </div>
+      </form>
+    </section>
+  )
+}
+
+// ------------------------------------------------------
+// SOCIAL LINKS
+// ------------------------------------------------------
+
+const SocialLinksSection = () => {
+  const user = useAuthStore((state) => state.user)
+  const setUser = useAuthStore((state) => state.setUser)
+
+  const initialLinks = padLinks(user?.socialLinks ?? [])
+
+  const [links, setLinks] = useState(initialLinks)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState(null)
+
+  const isSubmitDisabled = isSubmitting || links.every((url, i) => url === initialLinks[i])
+
+  const updateLink = (index, url) => {
+    const next = [...links]
+    next[index] = url
+    setLinks(next)
+    setSaved(false)
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaved(false)
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      // Drop empty slots before sending - the backend re-assigns SortOrder from list order
+      const urls = links.map((url) => url.trim()).filter(Boolean)
+
+      const response = await api("/account/social-links", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls }),
+      })
+      setUser(response.user)
+      setLinks(padLinks(response.user.socialLinks ?? []))
+      setSaved(true)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <section>
+      <h2 className="font-mono text-[11px] uppercase tracking-wider text-neutral-500 mb-3">
+        Social accounts
+      </h2>
+
+      {error && (
+        <div className="flex items-start gap-3 bg-red-400/10 border border-red-400/20 rounded-lg px-4 py-3.5 mb-5 max-w-md">
+          <CircleAlert className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-red-300">{error}</p>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+        <div className="space-y-2">
+          {links.map((url, i) => (
+            <TextField
+              key={i}
+              id={`socialLink-${i}`}
+              icon={LinkIcon}
+              type="url"
+              value={url}
+              onChange={(e) => updateLink(i, e.target.value)}
+              placeholder={`Link to social profile ${i + 1}`}
+            />
+          ))}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <SaveButton isSubmitting={isSubmitting} disabled={isSubmitDisabled}>Save changes</SaveButton>
+
+          {saved && (
+            <span className="flex items-center gap-1.5 text-sm text-neutral-500">
+              <CircleCheck className="w-4 h-4 text-(--primary-color)" />
+              Saved
+            </span>
+          )}
         </div>
       </form>
     </section>
