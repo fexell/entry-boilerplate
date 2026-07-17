@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 
+import Logo from "@/components/Utils/Logo"
+
 // Shared layout for /info and its sub-pages (e.g. /info/cookies).
 // Uses router.back() rather than a fixed href so the button does the
 // right thing whether you're on /info or one level deeper.
@@ -10,7 +12,7 @@ export default function InfoLayout({ children }) {
   const router = useRouter()
 
   return (
-    <div className="min-h-[calc(100vh-57px)] max-h-auto bg-neutral-950">
+    <div className="flex flex-col min-h-[calc(100vh-57px)] max-h-auto bg-neutral-950">
       <div className="mx-auto w-full max-w-3xl px-6 pt-8">
         <button
           type="button"
@@ -21,7 +23,14 @@ export default function InfoLayout({ children }) {
           Back
         </button>
       </div>
-      {children}
+      <div className="flex flex-1 flex-col justify-center items-center w-full max-w-3xl mx-auto px-6 pb-8">
+        <div className="flex flex-col items-center">
+          <Logo link="/" linkClassName="hover:opacity-80 transition-opacity" width={80} height={80} />
+          <div>
+            {children}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

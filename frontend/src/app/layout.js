@@ -7,6 +7,7 @@ import HeaderComponent from "@/components/Header/Header";
 import FooterComponent from "@/components/Footer/Footer";
 import AuthProvider from '@/components/Auth/AuthProvider';
 import CookieConsent from "@/components/UI/CookieConsent";
+import Logo from "@/components/Utils/Logo";
 
 import "./globals.css";
 
@@ -34,21 +35,13 @@ const RootLayout = ({ children }) => {
             {children}
           </AuthProvider>
 
-          <div className="border-t border-neutral-800 bg-neutral-950 px-4 py-4">
-            <div className="mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 text-xs text-neutral-600 sm:flex-row">
+          <div className="flex flex-col justify-center items-center h-[57px] border-t border-neutral-800 bg-neutral-950 px-4 py-4">
+            <div className="w-full mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 text-xs text-neutral-400 sm:flex-row">
               <span>
                 &copy; {new Date().getFullYear()}{" "}
                 {process.env.NEXT_PUBLIC_APP_NAME ?? "Entry"}. All rights
                 reserved.
               </span>
-              <div>
-                <Link
-                  href="/"
-                  className="text-neutral-500 transition-colors hover:text-(--primary-color)"
-                >
-                  <Image src="/entry-logo-icon.svg" alt="Entry Logo" width={24} height={24} />
-                </Link>
-              </div>
               <Link
                 href="/info"
                 className="text-neutral-500 transition-colors hover:text-(--primary-color)"

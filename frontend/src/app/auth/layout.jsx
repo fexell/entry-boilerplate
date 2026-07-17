@@ -7,6 +7,8 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { usePathname } from "next/navigation"
 
+import Logo from "@/components/Utils/Logo"
+
 import useAuthStore from '@/store/useAuthStore'
 
 export default function AuthLayout({ children }) {
@@ -32,20 +34,12 @@ export default function AuthLayout({ children }) {
         className="auth flex flex-col items-center justify-center min-h-[calc(100vh-57px)] bg-neutral-950">
         <Link
           href={ paths.includes(pathname) ? "/auth" : "/auth/login" }
-          className="absolute top-4 left-4 flex w-8 h-8 rounded-full justify-center items-center gap-2 tracking-widest text-neutral-950 bg-(--primary-color) hover:bg-(--primary-color-hover)">
+          className="absolute top-0 left-0 p-4 group inline-flex items-center gap-1.5 text-sm text-neutral-500 transition-colors hover:text-(--primary-color) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--primary-color)/60 rounded-sm">
           <ArrowLeft className="w-4 h-4" />
+          <span>{ paths.includes(pathname) ? "Auth index" : "Login" }</span>
         </Link>
         <div className="auth-container flex flex-col items-center w-full max-w-105 h-fit z-10">
-          <Link className="flex justify-center items-center h-20" href="/">
-            <Image
-              src="/entry-logo-icon.svg"
-              alt="Logo"
-              width={80}
-              height={0}
-              className="h-auto mb-8 hover:brightness-80 transition-all"
-              priority
-            />
-          </Link>
+          <Logo link="/" linkClassName="hover:opacity-80 transition-opacity" width={80} height={80} />
           <div className="w-full max-w-105">
             {children}
           </div>
