@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, UserPlus } from "lucide-react"
 
 import LogoutButtonComponent from "../Utils/LogoutButton"
 import SettingsButtonComponent from "../Utils/SettingsButton"
@@ -47,6 +47,7 @@ const LoggedOutHeader = () => {
               href="/auth/signup"
               className="flex items-center p-2 px-4 gap-2 rounded-full font-mono text-xs tracking-widest text-neutral-950 transition-colors bg-(--primary-color) hover:bg-(--primary-color-hover)"
             >
+              <UserPlus className="w-4 h-4" />
               SIGN UP
             </Link>
           </div>
@@ -63,7 +64,7 @@ const LoggedInHeader = () => {
         id="MainHeader"
         className="sticky py-2 top-0 z-40 border-b border-neutral-800/60 bg-neutral-950/80 backdrop-blur-md"
       >
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-2">
           {/* Brand mark — same eyebrow language as the login screen */}
           <Link
             href="/"

@@ -22,7 +22,7 @@ export default function LogoutButtonComponent({ className = "" }) {
       type="button"
       onClick={handleLogout}
       disabled={isLoggingOut}
-      className={`flex items-center gap-2 text-sm text-neutral-400 hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${className}`}
+      className={`flex items-center py-1.5 gap-2 text-sm text-neutral-400 hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${className}`}
     >
       <LogOut className="w-4 h-4" />
       {isLoggingOut ? "Logging out..." : "Log out"}
