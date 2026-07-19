@@ -8,7 +8,7 @@ export default function LoginButton({ children, className }) {
   return (
     <>
       <Link
-        href={ `/auth/login?fp=${pathname !== "/" ? `from=${pathname}` : "index"}` } // fp = "from page/path"
+        href={`/auth/login?fp=${pathname !== "/" ? encodeURIComponent(pathname) : "index"}`} // fp = "from page/path"
         className={clsx(
           className,
           "flex text-sm text-neutral-400 hover:text-(--primary-color) transition-colors font-mono"

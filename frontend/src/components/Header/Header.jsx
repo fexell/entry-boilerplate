@@ -71,9 +71,9 @@ const LoggedInHeader = () => {
     <>
       <header
         id="MainHeader"
-        className="sticky py-2 top-0 z-40 border-b border-neutral-800/60 bg-neutral-950 backdrop-blur-md"
+        className="flex flex-col sticky w-full py-2 top-0 z-40 border-b border-neutral-800/60 bg-neutral-950 backdrop-blur-md"
       >
-        <div className="mx-auto flex items-center justify-between px-6 py-2">
+        <div className="top-header w-full mx-auto flex items-center justify-between px-6 py-2">
           {/* Brand mark — same eyebrow language as the login screen */}
           <Link
             href="/"
@@ -84,8 +84,8 @@ const LoggedInHeader = () => {
 
           {/* Right-hand actions */}
           <Dropdown align="right">
-            <Dropdown.Trigger className="p-1 rounded-full">
-              <User className="w-6 h-6 text-white" />
+            <Dropdown.Trigger className="p-1 rounded-full hover:opacity-80">
+              <User className="w-5 h-5 text-white" />
             </Dropdown.Trigger>
 
             <Dropdown.Menu>
@@ -94,6 +94,9 @@ const LoggedInHeader = () => {
               <Dropdown.Item onClick={handleLogout} icon={<LogOut />} danger>Logout</Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
+        </div>
+        <div className="bottom-header">
+
         </div>
       </header>
     </>

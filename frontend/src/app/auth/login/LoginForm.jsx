@@ -60,8 +60,10 @@ export default function LoginForm() {
         return
       }
 
+      const fp = searchParams.get("fp")
+
       setUser(data.user)
-      router.push(searchParams.get("fp") !== ("index" || "/") ? searchParams.get("fp") : "/")
+      router.push(fp && fp !== "index" ? fp : "/")
     } catch (err) {
       setErrors(err.errors?.length ? err.errors : [err.message])
     } finally {
