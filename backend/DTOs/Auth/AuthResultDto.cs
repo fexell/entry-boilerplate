@@ -1,5 +1,7 @@
 using System.Text.Json.Serialization;
 
+using Entry.Auth.Models;
+
 namespace Entry.Auth.DTOs
 {
   public class AuthResultDto
@@ -20,5 +22,8 @@ namespace Entry.Auth.DTOs
     public bool RequiresTwoFactor { get; set; }
 
     public string? TwoFactorToken { get; set; }
+
+    [JsonIgnore]
+    public AuthFailureReason FailureReason { get; set; } = AuthFailureReason.None;
   }
 }

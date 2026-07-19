@@ -27,16 +27,20 @@ namespace Entry.Auth.Services
       string ip,
       string? email,
       string? userId,
-      bool success
+      bool success,
+      AuthFailureReason failureReason = AuthFailureReason.None,
+      string? userAgent = null
     )
     {
       var attempt = new AuthAttempt
       {
         Endpoint = endpoint,
         IpAddress = ip,
+        UserAgent = userAgent,
         Email = email?.Trim().ToUpperInvariant(),
         UserId = userId,
         Success = success,
+        FailureReason = success ? AuthFailureReason.None : failureReason,
         Timestamp = DateTime.UtcNow
       };
 

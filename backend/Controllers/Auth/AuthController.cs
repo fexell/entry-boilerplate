@@ -136,6 +136,7 @@ namespace Entry.Auth.Controllers
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
       var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+      var userAgent = Request.Headers.UserAgent.ToString();
 
       // -----------------------------
       // 1. BRUTE-FORCE CHECKS
@@ -163,13 +164,16 @@ namespace Entry.Auth.Controllers
       var result = await _authService.LoginAsync(dto);
 
       // Log every attempt right away, regardless of what happens next,
-      // so brute-force counters always see it.
+      // so brute-force counters always see it. FailureReason/UserAgent are
+      // for internal security logging only - they never reach the client.
       await _bruteForceService.LogAsync(
         endpoint: "login",
         ip: ip,
         email: dto.Email,
         userId: user?.Id,
-        success: result.Success
+        success: result.Success,
+        failureReason: result.FailureReason,
+        userAgent: userAgent
       );
 
       // -----------------------------
@@ -262,6 +266,7 @@ namespace Entry.Auth.Controllers
     public async Task<IActionResult> VerifyTwoFactorLogin([FromBody] VerifyTwoFactorLoginDto dto)
     {
       var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+      var userAgent = Request.Headers.UserAgent.ToString();
 
       // -----------------------------
       // 1. BRUTE-FORCE CHECKS
@@ -294,7 +299,9 @@ namespace Entry.Auth.Controllers
         ip: ip,
         email: null,
         userId: userId,
-        success: result.Success
+        success: result.Success,
+        failureReason: result.FailureReason,
+        userAgent: userAgent
       );
 
       // -----------------------------

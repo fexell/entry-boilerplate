@@ -35,8 +35,8 @@ const RootLayout = ({ children }) => {
             {children}
           </AuthProvider>
 
-          <div className="flex flex-col justify-center items-center h-[57px] border-t border-neutral-800 bg-neutral-950 px-4 py-4">
-            <div className="w-full mx-auto flex max-w-5xl flex-col items-center justify-between gap-2 text-xs text-neutral-400 sm:flex-row">
+          <div className="flex flex-col justify-center items-center h-14.25 border-t border-neutral-800 bg-neutral-950 px-4 py-4">
+            <div className="w-full mx-auto flex flex-col items-center justify-between gap-2 text-xs text-neutral-400 sm:flex-row">
               <span>
                 &copy; {new Date().getFullYear()}{" "}
                 {process.env.NEXT_PUBLIC_APP_NAME ?? "Entry"}. All rights

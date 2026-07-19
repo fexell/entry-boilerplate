@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Mail, Lock, Eye, EyeOff, ArrowRight, CircleAlert, KeyRound } from "lucide-react"
 
@@ -17,6 +17,7 @@ const REMEMBERED_EMAIL_KEY = "email"
 
 export default function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const setUser = useAuthStore((state) => state.setUser)
 
   const [formData, setFormData] = useState({
@@ -60,7 +61,7 @@ export default function LoginForm() {
       }
 
       setUser(data.user)
-      router.push("/")
+      router.push(searchParams.get("fp") !== ("index" || "/") ? searchParams.get("fp") : "/")
     } catch (err) {
       setErrors(err.errors?.length ? err.errors : [err.message])
     } finally {

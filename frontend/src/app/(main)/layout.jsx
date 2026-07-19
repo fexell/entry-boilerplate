@@ -7,7 +7,7 @@ export default function MainLayout({ children }) {
   return (
     <>
       <HeaderComponent />
-      <main className="min-h-[calc(100vh-57px-65px)]">{children}</main>
+      <main className="min-h-[calc(100vh-57px-73px)] bg-neutral-900">{children}</main>
       <FooterComponent />
     </>
   );

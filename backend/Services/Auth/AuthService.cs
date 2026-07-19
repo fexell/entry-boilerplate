@@ -46,12 +46,16 @@ namespace Entry.Auth.Services
     // HELPERS
     // ------------------------------------------------------
 
-    private static AuthResultDto Fail(string error)
+    // `error` is the generic, public-facing message (what the client sees in
+    // Errors). `reason` is the detailed internal reason used for security
+    // logging only - it is never serialized back to the client.
+    private static AuthResultDto Fail(string error, AuthFailureReason reason = AuthFailureReason.Other)
     {
       return new AuthResultDto
       {
         Success = false,
-        Errors = new List<string> { error }
+        Errors = new List<string> { error },
+        FailureReason = reason
       };
     }
 
@@ -101,7 +105,7 @@ namespace Entry.Auth.Services
         _userManager.PasswordHasher.HashPassword(null!, "dummy");
 
         _logger.LogWarning("Login attempt failed: unknown email.");
-        return Fail("Invalid credentials.");
+        return Fail("Invalid credentials.", AuthFailureReason.UnknownEmail);
       }
 
       var signInResult = await _signInManager.CheckPasswordSignInAsync(user, dto.Password!, lockoutOnFailure: true);
@@ -109,7 +113,7 @@ namespace Entry.Auth.Services
       if (signInResult.IsLockedOut)
       {
         _logger.LogWarning("Login attempt failed: account locked out. UserId: {UserId}", user.Id);
-        return Fail("Account is locked. Please try again later.");
+        return Fail("Account is locked. Please try again later.", AuthFailureReason.AccountLocked);
       }
 
       if (signInResult.IsNotAllowed)
@@ -117,17 +121,17 @@ namespace Entry.Auth.Services
         if (!user.EmailConfirmed)
         {
           _logger.LogWarning("Login attempt failed: email not confirmed. UserId: {UserId}", user.Id);
-          return Fail("Please verify your email before logging in.");
+          return Fail("Please verify your email before logging in.", AuthFailureReason.AccountDisabled);
         }
 
         _logger.LogWarning("Login attempt failed: not allowed. UserId: {UserId}", user.Id);
-        return Fail("Login not allowed.");
+        return Fail("Login not allowed.", AuthFailureReason.AccountDisabled);
       }
 
       if (!signInResult.Succeeded)
       {
         _logger.LogWarning("Login attempt failed: invalid credentials. UserId: {UserId}", user.Id);
-        return Fail("Invalid credentials.");
+        return Fail("Invalid credentials.", AuthFailureReason.InvalidCredentials);
       }
 
       if (await _userManager.GetTwoFactorEnabledAsync(user))
@@ -166,7 +170,7 @@ namespace Entry.Auth.Services
       if (result == null)
       {
         _logger.LogWarning("Invalid or expired refresh token.");
-        return Fail("Invalid or expired refresh token.");
+        return Fail("Invalid or expired refresh token.", AuthFailureReason.InvalidRefreshToken);
       }
 
       var user = await _userManager.FindByIdAsync(result.UserId);
@@ -209,7 +213,7 @@ namespace Entry.Auth.Services
       if (pair == null)
       {
         _logger.LogWarning("Invalid or expired refresh token during silent refresh. UserId: {UserId}", user.Id);
-        return Fail("Invalid or expired refresh token.");
+        return Fail("Invalid or expired refresh token.", AuthFailureReason.InvalidRefreshToken);
       }
 
       var userMe = await _userService.GetUserMeAsync(user);
@@ -279,7 +283,7 @@ namespace Entry.Auth.Services
       if (!verified)
       {
         _logger.LogWarning("Two-factor verification failed. UserId: {UserId}", user.Id);
-        return Fail("Invalid verification code.");
+        return Fail("Invalid verification code.", AuthFailureReason.InvalidTwoFactorCode);
       }
 
       return await GenerateAuthResultAsync(user);
