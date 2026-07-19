@@ -143,7 +143,7 @@ Dropdown.Menu = function Menu({ children, className }) {
       role="menu"
       onKeyDown={handleKeyDown}
       className={clsx(
-        "absolute z-50 mt-2 min-w-[220px] rounded-lg border border-neutral-800",
+        "absolute z-50 mt-2 min-w-55 rounded-lg border border-neutral-800",
         "bg-neutral-900 py-1 shadow-2xl",
         align === "right" ? "right-0" : "left-0",
         className
