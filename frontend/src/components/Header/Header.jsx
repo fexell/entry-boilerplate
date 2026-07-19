@@ -84,7 +84,7 @@ const LoggedInHeader = () => {
 
           {/* Right-hand actions */}
           <Dropdown align="right">
-            <Dropdown.Trigger className="p-1">
+            <Dropdown.Trigger className="p-1 rounded-full">
               <User className="w-6 h-6 text-white" />
             </Dropdown.Trigger>
 
