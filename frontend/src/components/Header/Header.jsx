@@ -1,12 +1,15 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowRight, UserPlus } from "lucide-react"
+import { ArrowRight, UserPlus, User, Settings, LogOut } from "lucide-react"
+import { toast } from "sonner"
 
 import LogoutButtonComponent from "../Utils/LogoutButton"
 import SettingsButtonComponent from "../Utils/SettingsButton"
 import Logo from "../Utils/Logo"
 import LoginButton from "../Utils/LoginButton"
+import Dropdown from '../UI/Dropdown'
 
 import useAuthStore from "@/store/useAuthStore"
 
@@ -54,6 +57,16 @@ const LoggedOutHeader = () => {
 }
 
 const LoggedInHeader = () => {
+  const logout = useAuthStore((s) => s.logout)
+  const isLoggingOut = useAuthStore((s) => s.isLoggingOut)
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    await logout()
+    router.push("/auth/logged-out?from=logout")
+    toast.success("Logged out.")
+  }
+
   return (
     <>
       <header
@@ -70,11 +83,17 @@ const LoggedInHeader = () => {
           </Link>
 
           {/* Right-hand actions */}
-          <div className="flex items-center gap-4">
-            <SettingsButtonComponent />
-            <span className="mx-1.5 h-4 w-px bg-neutral-800" aria-hidden="true" />
-            <LogoutButtonComponent />
-          </div>
+          <Dropdown align="right">
+            <Dropdown.Trigger className="p-1">
+              <User className="w-6 h-6 text-white" />
+            </Dropdown.Trigger>
+
+            <Dropdown.Menu>
+              <Dropdown.Item href="/settings" icon={<Settings />}>Settings</Dropdown.Item>
+              <Dropdown.Divider />
+              <Dropdown.Item onClick={handleLogout} icon={<LogOut />} danger>Logout</Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
         </div>
       </header>
     </>
