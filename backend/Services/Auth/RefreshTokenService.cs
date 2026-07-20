@@ -185,8 +185,10 @@ namespace Entry.Auth.Services
         {
           var existing = await _db.RefreshTokens
             .FromSqlInterpolated($@"
-              SELECT * FROM RefreshTokens WITH (UPDLOCK, ROWLOCK)
-              WHERE Token = {refreshToken}")
+              SELECT * FROM ""RefreshTokens""
+              WHERE ""Token"" = {refreshToken}
+              FOR UPDATE
+            ")
             .Include(x => x.Session)
             .FirstOrDefaultAsync();
 

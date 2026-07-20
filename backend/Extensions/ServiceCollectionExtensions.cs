@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authorization;
+using Npgsql.EntityFrameworkCore.PostgreSQL;
 
 using Entry.Auth.Configuration;
 using Entry.Auth.Data;
@@ -22,17 +23,17 @@ namespace Entry.Auth.Extensions
     )
     {
       services.AddDbContext<AppDbContext>(options =>
-        options.UseSqlServer(
+        options.UseNpgsql(
           config.GetConnectionString("Default"),
-          sql =>
+          npgsql =>
           {
-            sql.EnableRetryOnFailure(
+            npgsql.EnableRetryOnFailure(
               maxRetryCount: 5,
               maxRetryDelay: TimeSpan.FromSeconds(10),
-              errorNumbersToAdd: null
+              errorCodesToAdd: null
             );
 
-            sql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
+            npgsql.MigrationsAssembly(typeof(AppDbContext).Assembly.FullName);
           }
         )
       );

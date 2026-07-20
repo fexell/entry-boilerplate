@@ -21,33 +21,6 @@ namespace Entry.Auth.Data
     {
       base.OnModelCreating(builder);
 
-      // SQL Server has no timezone-aware datetime type, so EF Core reads
-      // every DateTime back as Kind=Unspecified even though we always write
-      // DateTime.UtcNow. Without this, System.Text.Json serializes those
-      // values without a "Z" suffix, and JS then parses them as local time
-      // instead of UTC - causing relative-time displays to be off by the
-      // client's UTC offset (e.g. "2 hours ago" right after login).
-      foreach (var entityType in builder.Model.GetEntityTypes())
-      {
-        foreach (var property in entityType.GetProperties())
-        {
-          if (property.ClrType == typeof(DateTime))
-          {
-            property.SetValueConverter(new ValueConverter<DateTime, DateTime>(
-              v => v,
-              v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
-            ));
-          }
-          else if (property.ClrType == typeof(DateTime?))
-          {
-            property.SetValueConverter(new ValueConverter<DateTime?, DateTime?>(
-              v => v,
-              v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v
-            ));
-          }
-        }
-      }
-
       builder.Entity<AppUser>(entity =>
       {
         entity.ToTable("Users");
