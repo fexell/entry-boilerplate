@@ -74,7 +74,7 @@ function FaqItem({ item, isOpen, onToggle }) {
         type="button"
         onClick={onToggle}
         aria-expanded={isOpen}
-        className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-medium text-neutral-200 transition-colors hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 rounded-sm"
+        className="flex w-full items-center justify-between gap-4 py-4 text-left text-sm font-medium text-neutral-200 transition-colors hover:text-(--primary-color) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/60 rounded-sm"
       >
         {item.q}
         <ChevronIcon open={isOpen} />
@@ -100,7 +100,7 @@ export default function CookiesContent() {
     <div className="mx-auto w-full max-w-3xl px-6 py-16 sm:py-20">
       {/* Hero */}
       <div className="mb-14">
-        <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-medium tracking-wide text-amber-400">
+        <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-(--primary-color)/20 bg-(--primary-color)/10 px-3 py-1 text-xs font-medium tracking-wide text-(--primary-color)">
           Privacy
         </span>
         <h1 className="text-3xl font-semibold tracking-tight text-neutral-50 sm:text-4xl">
@@ -125,7 +125,7 @@ export default function CookiesContent() {
               className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-4 sm:p-5"
             >
               <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-                <code className="rounded-md bg-neutral-950 px-2 py-1 font-mono text-sm text-amber-400 ring-1 ring-inset ring-neutral-800">
+                <code className="rounded-md bg-neutral-950 px-2 py-1 font-mono text-sm text-(--primary-color) ring-1 ring-inset ring-neutral-800">
                   {cookie.name}
                 </code>
                 <span className="inline-flex items-center rounded-full bg-neutral-800 px-2.5 py-0.5 text-xs font-medium text-neutral-300">

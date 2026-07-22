@@ -8,6 +8,8 @@ import FooterComponent from "@/components/Footer/Footer";
 import AuthProvider from '@/components/Auth/AuthProvider';
 import CookieConsent from "@/components/UI/CookieConsent";
 import Logo from "@/components/Utils/Logo";
+import AsideMenu from "@/components/Menu/Menu";
+import { SubNavProvider } from "@/context/SubNavContext"
 
 import "./globals.css";
 
@@ -32,8 +34,12 @@ const RootLayout = ({ children }) => {
       <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
         <body>
           <AuthProvider>
-            {children}
+            <SubNavProvider>
+              {children}
+            </SubNavProvider>
           </AuthProvider>
+
+          <AsideMenu />
 
           <div className="flex flex-col justify-center items-center h-14.25 border-t border-neutral-800 bg-neutral-950 px-4 py-4">
             <div className="w-full mx-auto flex flex-col items-center justify-between gap-2 text-xs text-neutral-400 sm:flex-row">
