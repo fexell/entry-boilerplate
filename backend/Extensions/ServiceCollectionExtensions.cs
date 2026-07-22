@@ -8,8 +8,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authorization;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 
-using Audwio.Projects;
-
 using Entry.Auth.Configuration;
 using Entry.Auth.Data;
 using Entry.Auth.Models;
@@ -146,8 +144,6 @@ namespace Entry.Auth.Extensions
       services.AddScoped<ILoginNotificationService, LoginNotificationService>();
 
       services.AddScoped<IFrontendUrlProvider, FrontendUrlProvider>();
-
-      services.AddScoped<IProjectService, ProjectService>();
 
       services.AddHostedService<EmailVerificationRefreshService>();
       services.AddHostedService<AuthDataRetentionService>();

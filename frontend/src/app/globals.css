@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --primary-color: #00CCFF;
+  --primary-color: #ffba00;
   --primary-color-hover: color-mix(in srgb, var(--primary-color) 40%, white);
 }
 

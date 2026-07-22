@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server"
 
 const PROTECTED_PATHS = [
-  "/settings",
-  "/new",
+  "/settings"
 ]
 
 export function proxy(request) {
@@ -30,7 +29,6 @@ export function proxy(request) {
 
 export const config = {
   matcher: [
-    "/settings/:path*",
-    "/new",
+    "/settings/:path*"
   ]
 }

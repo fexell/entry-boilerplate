@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-using Audwio.Projects;
-
 using Entry.Auth.Models;
 
 namespace Entry.Auth.Data
@@ -18,7 +16,6 @@ namespace Entry.Auth.Data
     public DbSet<AuthAttempt> AuthAttempts { get; set; } = null!;
     public DbSet<LoginRiskAssessment> LoginRiskAssessments { get; set; } = null!;
     public DbSet<SocialLink> SocialLinks { get; set; } = null!;
-    public DbSet<Project> Projects { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -145,34 +142,6 @@ namespace Entry.Auth.Data
           .WithMany(u => u.SocialLinks)
           .HasForeignKey(x => x.UserId)
           .OnDelete(DeleteBehavior.Cascade);
-      });
-
-      builder.Entity<Project>(entity =>
-      {
-        entity.HasKey(x => x.Id);
-
-        entity.Property(x => x.OwnerId).IsRequired();
-        entity.Property(x => x.Name).IsRequired().HasMaxLength(100);
-        entity.Property(x => x.Slug).IsRequired().HasMaxLength(120);
-        entity.Property(x => x.Description).HasMaxLength(350);
-        entity.Property(x => x.Genre).HasMaxLength(50);
-        entity.Property(x => x.License).HasMaxLength(30);
-
-        entity.Property(x => x.CoverImageUrl).HasMaxLength(2048);
-
-        entity.Property(x => x.Visibility)
-          .HasConversion<string>()
-          .HasMaxLength(16);
-
-        // Slugs only need to be unique within one owner's projects, not globally.
-        entity.HasIndex(x => new { x.OwnerId, x.Slug }).IsUnique();
-
-        // No nav-property collection on AppUser (matches the LoginRiskAssessment pattern
-        // above) — add one there later if you want owner.Projects to be queryable directly.
-        entity.HasOne(x => x.Owner)
-              .WithMany()
-              .HasForeignKey(x => x.OwnerId)
-              .OnDelete(DeleteBehavior.Cascade);
       });
     }
   }
